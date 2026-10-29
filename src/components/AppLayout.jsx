@@ -6,7 +6,7 @@ const NAV = [
   { to: '/', label: 'Collection', icon: Library },
   { to: '/scan', label: 'Scan', icon: ScanLine },
   { to: '/plex', label: 'Plex', icon: Tv },
-  { to: '/history', label: 'History', icon: HistoryIcon },
+  { to: '/history', label: 'Recently Added', short: 'Recent', icon: HistoryIcon },
   { to: '/settings', label: 'Setup', icon: Settings },
 ];
 
@@ -51,20 +51,20 @@ export default function AppLayout() {
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden">
         <div className="grid grid-cols-5">
-          {NAV.map(({ to, label, icon: Icon }) => (
+          {NAV.map(({ to, label, short, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center gap-1 py-2.5 text-[10px] uppercase tracking-wider',
+                  'flex flex-col items-center gap-1 px-1 py-2.5 text-center text-[10px] uppercase tracking-wider',
                   isActive ? 'text-primary' : 'text-muted-foreground'
                 )
               }
             >
               <Icon className="h-5 w-5" />
-              {label}
+              {short || label}
             </NavLink>
           ))}
         </div>
