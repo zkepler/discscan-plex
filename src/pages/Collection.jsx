@@ -17,6 +17,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { loadConfig } from '@/lib/appSettings';
 import { cn } from '@/lib/utils';
 import { subscribeDiscs } from '@/lib/discEvents';
+import { groupDiscs } from '@/lib/groupDiscs';
 import { useTabReselect } from '@/lib/tabReset';
 
 const FILTERS = [
@@ -137,6 +138,8 @@ export default function Collection() {
       .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
   }, [discs, query, filter]);
 
+  const groups = useMemo(() => groupDiscs(filtered), [filtered]);
+
   return (
     <div>
       <PullIndicator pull={pull} refreshing={refreshing} threshold={threshold} />
@@ -248,11 +251,11 @@ export default function Collection() {
       ) : (
         <>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {filtered.slice(0, visible).map((disc) => (
-              <DiscCard key={disc.id} disc={disc} onSelect={openDisc} />
+            {groups.slice(0, visible).map((group) => (
+              <DiscCard key={group.key} discs={group.discs} onSelect={openDisc} />
             ))}
           </div>
-          {filtered.length > visible ? (
+          {groups.length > visible ? (
             <div className="mt-8 text-center">
               <Button variant="outline" onClick={() => setVisible((count) => count + PAGE_SIZE)}>
                 Show more
