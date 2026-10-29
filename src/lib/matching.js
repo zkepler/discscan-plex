@@ -38,7 +38,7 @@ function pickBest(candidates, year, format) {
 }
 
 // "The Office Season 1" should still find the show "The Office".
-function baseTitle(key) {
+export function baseTitle(key) {
   return key
     .replace(/\b(season|series|volume|vol|disc|complete|collection|box)\b.*$/, '')
     .trim();

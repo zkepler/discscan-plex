@@ -10,6 +10,7 @@ import DiscCard from '@/components/collection/DiscCard';
 import DiscDialog from '@/components/collection/DiscDialog';
 import PlexPreview from '@/components/collection/PlexPreview';
 import ShareDialog from '@/components/collection/ShareDialog';
+import FixTitlesButton from '@/components/collection/FixTitlesButton';
 import { loadConfig } from '@/lib/appSettings';
 import { cn } from '@/lib/utils';
 
@@ -90,7 +91,13 @@ export default function Collection() {
           <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Everything you own</p>
           <h1 className="mt-2 font-display text-4xl leading-none text-foreground sm:text-5xl">The Collection</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <FixTitlesButton
+            config={config}
+            discs={discs}
+            onDone={refresh}
+            disabled={loading || discs.length === 0}
+          />
           <Button variant="outline" onClick={() => setSharing(true)} disabled={loading || discs.length === 0}>
             <Share2 className="mr-2 h-4 w-4" />
             Share
