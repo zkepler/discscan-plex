@@ -11,7 +11,7 @@ export default function StatsRow({ discs, inPlex, missing, plexTotal }) {
       {items.map((item) => (
         <div key={item.label} className="bg-card px-4 py-4">
           <p className="font-display text-3xl leading-none text-foreground">{item.value}</p>
-          <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{item.label}</p>
+          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">{item.label}</p>
         </div>
       ))}
     </div>

@@ -15,6 +15,7 @@ import PlexMovieRow from '@/components/plex/PlexMovieRow';
 import { loadConfig } from '@/lib/appSettings';
 import { syncPlexLibrary } from '@/lib/plexSync';
 import { escapeRegex } from '@/lib/matching';
+import { useTabReselect } from '@/lib/tabReset';
 import PullIndicator from '@/components/PullIndicator';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { ChevronDown, Loader2, RefreshCw, Search, Tv } from 'lucide-react';
@@ -57,6 +58,11 @@ export default function PlexLibrary() {
   const [progress, setProgress] = useState('');
 
   const labelFor = (value) => KIND_FILTERS.find((option) => option.value === value)?.label || 'Everything';
+
+  useTabReselect('/plex', () => {
+    setQuery('');
+    setKind('all');
+  });
 
   const load = async () => {
     const cfg = await loadConfig();
@@ -158,7 +164,7 @@ export default function PlexLibrary() {
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Synced from your server</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Synced from your server</p>
           <h1 className="mt-2 font-display text-4xl leading-none text-foreground sm:text-5xl">Plex library</h1>
           <p className="mt-2 text-xs text-muted-foreground">
             {config.last_sync

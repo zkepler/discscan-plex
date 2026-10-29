@@ -9,7 +9,7 @@ export default function PlexPreview({ items, config, plexTotal }) {
     <section className="mt-12">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">In your library</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">In your library</p>
           <h2 className="mt-1.5 font-display text-2xl text-foreground">Plex only</h2>
         </div>
         <Link
@@ -36,7 +36,7 @@ export default function PlexPreview({ items, config, plexTotal }) {
             </div>
             <div className="p-2">
               <p className="truncate text-xs font-medium text-foreground">{movie.title}</p>
-              <p className="text-[10px] text-muted-foreground">{movie.year || '—'}</p>
+              <p className="text-xs text-muted-foreground">{movie.year || '—'}</p>
             </div>
           </div>
         ))}

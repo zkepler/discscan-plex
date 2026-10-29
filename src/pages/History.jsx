@@ -78,7 +78,7 @@ export default function History() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Straight from your server</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Straight from your server</p>
           <h1 className="mt-2 font-display text-4xl leading-none text-foreground sm:text-5xl">
             Recently Added to Plex
           </h1>

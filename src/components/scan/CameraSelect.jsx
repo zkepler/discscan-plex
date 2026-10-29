@@ -66,7 +66,7 @@ export default function CameraSelect({ value, onChange, disabled }) {
         </Select>
       </div>
       {hasIphone ? (
-        <p className="mt-1 pl-6 text-[11px] text-muted-foreground">
+        <p className="mt-1 pl-6 text-xs text-muted-foreground">
           iPhone camera detected — pick it above to scan with your phone.
         </p>
       ) : null}

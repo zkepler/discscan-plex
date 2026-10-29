@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { findPlexMatch } from '@/lib/matching';
+import { emitDisc } from '@/lib/discEvents';
 import { FORMATS } from '@/lib/constants';
 import { Check } from 'lucide-react';
 
@@ -17,30 +18,48 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
     format: 'DVD',
     location: '',
   });
-  const [saving, setSaving] = useState(false);
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  async function save() {
-    if (!form.title.trim()) return;
-    setSaving(true);
-    const match = await findPlexMatch(form.title.trim(), form.year, form.format);
-    await base44.entities.Disc.create({
-      title: form.title.trim(),
+  function save() {
+    const title = form.title.trim();
+    if (!title) return;
+
+    const draft = {
+      id: `draft-${Date.now()}`,
+      title,
       upc: capture.upc,
       year: form.year ? Number(form.year) : null,
       format: form.format,
       location: form.location.trim(),
       cover_url: capture.image || '',
-      plex_rating_key: match?.rating_key || null,
-      plex_title: match?.title || null,
-    });
-    setSaving(false);
-    toast({
-      title: 'Added to your shelf',
-      description: match ? `${form.title.trim()} · matched in Plex` : form.title.trim(),
-    });
+      plex_rating_key: null,
+      plex_title: null,
+    };
+
+    emitDisc({ type: 'create', disc: draft });
+    toast({ title: 'Added to your shelf', description: title });
     onDone();
+
+    (async () => {
+      try {
+        const match = await findPlexMatch(title, form.year, form.format);
+        const created = await base44.entities.Disc.create({
+          title,
+          upc: draft.upc,
+          year: draft.year,
+          format: draft.format,
+          location: draft.location,
+          cover_url: draft.cover_url,
+          plex_rating_key: match?.rating_key || null,
+          plex_title: match?.title || null,
+        });
+        emitDisc({ type: 'replace', id: draft.id, disc: created });
+      } catch (error) {
+        emitDisc({ type: 'remove', id: draft.id });
+        toast({ variant: 'destructive', title: 'Could not save that disc', description: error.message });
+      }
+    })();
   }
 
   return (
@@ -115,9 +134,9 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
           <Button variant="ghost" onClick={onCancel}>
             Scan another
           </Button>
-          <Button onClick={save} disabled={saving || !form.title.trim()}>
+          <Button onClick={save} disabled={!form.title.trim()}>
             <Check className="mr-2 h-4 w-4" />
-            {saving ? 'Adding…' : 'Add to shelf'}
+            Add to shelf
           </Button>
         </div>
       </div>

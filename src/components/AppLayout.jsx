@@ -1,6 +1,7 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { History as HistoryIcon, Library, ScanLine, Tv, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { reselectTab } from '@/lib/tabReset';
 
 const NAV = [
   { to: '/', label: 'Collection', icon: Library },
@@ -11,13 +12,23 @@ const NAV = [
 ];
 
 export default function AppLayout() {
+  const { pathname } = useLocation();
+
+  // Tapping the tab you are already on jumps back to the top and clears its state.
+  const handleTabClick = (event, to) => {
+    if (pathname !== to) return;
+    event.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    reselectTab(to);
+  };
+
   return (
     <div className="app-surface screen-min">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-          <NavLink to="/" className="flex items-baseline gap-3">
+          <NavLink to="/" className="flex items-baseline gap-3" onClick={(event) => handleTabClick(event, '/')}>
             <span className="font-display text-2xl leading-none tracking-tight text-foreground">Shelfmark</span>
-            <span className="hidden text-[10px] uppercase tracking-[0.28em] text-muted-foreground sm:block">
+            <span className="hidden text-xs uppercase tracking-[0.28em] text-muted-foreground sm:block">
               Disc &amp; Plex archive
             </span>
           </NavLink>
@@ -28,6 +39,7 @@ export default function AppLayout() {
                 key={to}
                 to={to}
                 end={to === '/'}
+                onClick={(event) => handleTabClick(event, to)}
                 className={({ isActive }) =>
                   cn(
                     'flex select-none items-center gap-2 rounded-full px-3.5 py-2 text-sm transition-colors',
@@ -56,9 +68,10 @@ export default function AppLayout() {
               key={to}
               to={to}
               end={to === '/'}
+              onClick={(event) => handleTabClick(event, to)}
               className={({ isActive }) =>
                 cn(
-                  'flex select-none flex-col items-center gap-1 px-1 py-2.5 text-center text-[10px] uppercase tracking-wider',
+                  'flex select-none flex-col items-center gap-1 px-1 py-2.5 text-center text-xs uppercase tracking-wide',
                   isActive ? 'text-primary' : 'text-muted-foreground'
                 )
               }

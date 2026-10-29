@@ -152,7 +152,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="h-1/3 w-4/5 rounded-lg border-2 border-primary/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
             </div>
-            <p className="absolute inset-x-0 bottom-3 text-center text-[11px] uppercase tracking-[0.2em] text-white/70">
+            <p className="absolute inset-x-0 bottom-3 text-center text-xs uppercase tracking-[0.2em] text-white/70">
               {ready ? 'Hold the barcode inside the frame' : 'Starting camera…'}
             </p>
           </>

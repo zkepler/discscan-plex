@@ -1,24 +1,23 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { FORMATS } from '@/lib/constants';
-import DiscPlexMatch from '@/components/collection/DiscPlexMatch';
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { useToast } from '@/components/ui/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { emitDisc } from '@/lib/discEvents';
+import DiscForm from '@/components/collection/DiscForm';
 
 export default function DiscDialog({ disc, onClose, onChange }) {
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [form, setForm] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [lastDisc, setLastDisc] = useState(null);
   const [confirming, setConfirming] = useState(false);
 
+  // Keep the panel mounted after it closes so the sheet can animate away.
   useEffect(() => {
-    if (!disc) {
-      setForm(null);
-      return;
-    }
+    if (!disc) return;
+    setLastDisc(disc);
     setForm({
       title: disc.title || '',
       year: disc.year ? String(disc.year) : '',
@@ -29,15 +28,18 @@ export default function DiscDialog({ disc, onClose, onChange }) {
       plex_title: disc.plex_title || '',
     });
     setConfirming(false);
-  }, [disc]);
+  }, [disc?.id]);
 
-  if (!disc || !form) return null;
+  const shown = disc || lastDisc;
+  if (!shown || !form) return null;
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  async function save() {
-    setSaving(true);
-    await base44.entities.Disc.update(disc.id, {
+  const failed = (error) =>
+    toast({ variant: 'destructive', title: 'That change did not stick', description: error.message });
+
+  function save() {
+    const patch = {
       title: form.title.trim(),
       year: form.year ? Number(form.year) : null,
       format: form.format,
@@ -45,16 +47,54 @@ export default function DiscDialog({ disc, onClose, onChange }) {
       notes: form.notes.trim(),
       plex_rating_key: form.plex_rating_key || null,
       plex_title: form.plex_rating_key ? form.plex_title || null : null,
-    });
-    setSaving(false);
-    await onChange();
+    };
+
+    emitDisc({ type: 'patch', id: shown.id, patch });
     onClose();
+
+    base44.entities.Disc.update(shown.id, patch)
+      .then(() => onChange?.())
+      .catch((error) => {
+        failed(error);
+        onChange?.();
+      });
   }
 
-  async function remove() {
-    await base44.entities.Disc.delete(disc.id);
-    await onChange();
+  function remove() {
+    emitDisc({ type: 'remove', id: shown.id });
     onClose();
+
+    base44.entities.Disc.delete(shown.id)
+      .then(() => onChange?.())
+      .catch((error) => {
+        failed(error);
+        onChange?.();
+      });
+  }
+
+  const body = (
+    <DiscForm
+      disc={shown}
+      form={form}
+      set={set}
+      confirming={confirming}
+      onSave={save}
+      onRemove={() => (confirming ? remove() : setConfirming(true))}
+      onClose={onClose}
+    />
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={!!disc} onOpenChange={(open) => (!open ? onClose() : null)}>
+        <DrawerContent className="max-h-[92dvh] rounded-t-2xl border-x-0 border-b-0 border-border bg-card pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="min-h-0 overflow-y-auto px-5 pb-2">
+            <DrawerTitle className="pt-1 font-display text-2xl font-normal">Disc details</DrawerTitle>
+            <div className="mt-4">{body}</div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
   }
 
   return (
@@ -63,91 +103,7 @@ export default function DiscDialog({ disc, onClose, onChange }) {
         <DialogHeader>
           <DialogTitle className="font-display text-2xl font-normal">Disc details</DialogTitle>
         </DialogHeader>
-
-        <div className="flex gap-4">
-          <div className="h-32 w-[86px] shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-            {disc.cover_url ? (
-              <img src={disc.cover_url} alt="" className="h-full w-full object-cover" />
-            ) : null}
-          </div>
-
-          <div className="flex-1 space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" value={form.title} onChange={(e) => set('title', e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="year">Year</Label>
-                <Input
-                  id="year"
-                  inputMode="numeric"
-                  value={form.year}
-                  onChange={(e) => set('year', e.target.value.replace(/\D/g, '').slice(0, 4))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Format</Label>
-                <Select value={form.format} onValueChange={(value) => set('format', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FORMATS.map((format) => (
-                      <SelectItem key={format} value={format}>
-                        {format}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="location">Where it lives</Label>
-            <Input
-              id="location"
-              placeholder="Shelf 3, living room"
-              value={form.location}
-              onChange={(e) => set('location', e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} />
-          </div>
-          <DiscPlexMatch
-            discTitle={form.title}
-            ratingKey={form.plex_rating_key}
-            plexTitle={form.plex_title}
-            onLink={(match) =>
-              setForm((prev) => ({ ...prev, plex_rating_key: match.rating_key, plex_title: match.title }))
-            }
-            onUnlink={() => setForm((prev) => ({ ...prev, plex_rating_key: '', plex_title: '' }))}
-          />
-          {disc.upc ? <p className="text-xs text-muted-foreground">Barcode {disc.upc}</p> : null}
-        </div>
-
-        <div className="flex items-center justify-between pt-1">
-          <Button
-            variant={confirming ? 'destructive' : 'ghost'}
-            size="sm"
-            onClick={() => (confirming ? remove() : setConfirming(true))}
-          >
-            {confirming ? 'Confirm remove' : 'Remove'}
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={save} disabled={saving || !form.title.trim()}>
-              {saving ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
-        </div>
+        {body}
       </DialogContent>
     </Dialog>
   );

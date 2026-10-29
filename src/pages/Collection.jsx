@@ -15,6 +15,8 @@ import PullIndicator from '@/components/PullIndicator';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { loadConfig } from '@/lib/appSettings';
 import { cn } from '@/lib/utils';
+import { subscribeDiscs } from '@/lib/discEvents';
+import { useTabReselect } from '@/lib/tabReset';
 
 const FILTERS = [
   { id: 'all', label: 'All discs' },
@@ -35,6 +37,12 @@ export default function Collection() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sharing, setSharing] = useState(false);
+
+  useTabReselect('/', () => {
+    setQuery('');
+    setFilter('all');
+    setVisible(PAGE_SIZE);
+  });
 
   const refresh = async () => {
     const [discList, cfg] = await Promise.all([base44.entities.Disc.list(), loadConfig()]);
@@ -64,6 +72,22 @@ export default function Collection() {
   useEffect(() => {
     refresh();
   }, []);
+
+  // Discs saved, scanned or removed anywhere in the app land here instantly.
+  useEffect(
+    () =>
+      subscribeDiscs((change) => {
+        setDiscs((prev) => {
+          if (change.type === 'create') return [...prev, change.disc];
+          if (change.type === 'replace') return prev.map((disc) => (disc.id === change.id ? change.disc : disc));
+          if (change.type === 'patch')
+            return prev.map((disc) => (disc.id === change.id ? { ...disc, ...change.patch } : disc));
+          if (change.type === 'remove') return prev.filter((disc) => disc.id !== change.id);
+          return prev;
+        });
+      }),
+    []
+  );
 
   const inPlex = discs.filter((disc) => disc.plex_rating_key).length;
 
@@ -118,7 +142,7 @@ export default function Collection() {
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Everything you own</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Everything you own</p>
           <h1 className="mt-2 font-display text-4xl leading-none text-foreground sm:text-5xl">The Collection</h1>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">

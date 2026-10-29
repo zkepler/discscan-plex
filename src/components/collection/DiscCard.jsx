@@ -33,7 +33,7 @@ export default function DiscCard({ disc, onSelect }) {
 
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent p-3 pt-10">
             <p className="line-clamp-2 text-sm font-medium leading-tight text-white">{disc.title}</p>
-            <p className="mt-1 text-[11px] text-white/60">
+            <p className="mt-1 text-xs text-white/60">
               {[disc.year || null, disc.location || null].filter(Boolean).join(' · ')}
             </p>
           </div>
@@ -42,7 +42,7 @@ export default function DiscCard({ disc, onSelect }) {
 
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 rounded-t-lg border-b border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm">
         <span
-          className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
+          className={`text-xs font-semibold uppercase tracking-[0.14em] ${
             FORMAT_TONE[disc.format] || FORMAT_TONE.Other
           }`}
         >
@@ -52,12 +52,12 @@ export default function DiscCard({ disc, onSelect }) {
           <Link
             to={`/plex?q=${encodeURIComponent(plexQuery)}`}
             title={`In Plex as ${plexQuery}`}
-            className="text-[10px] uppercase tracking-[0.12em] text-white/60 transition-colors hover:text-primary"
+            className="text-xs uppercase tracking-[0.12em] text-white/60 transition-colors hover:text-primary"
           >
             In Plex
           </Link>
         ) : (
-          <span className="text-[10px] uppercase tracking-[0.12em] text-white/30">Not in Plex</span>
+          <span className="text-xs uppercase tracking-[0.12em] text-white/30">Not in Plex</span>
         )}
       </div>
     </div>

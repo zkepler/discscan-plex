@@ -16,7 +16,7 @@ export default function PlexMovieRow({ movie, config, owned }) {
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{movie.title}</p>
-        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
           {[
             movie.year || null,
             movie.kind === 'show'
@@ -34,11 +34,11 @@ export default function PlexMovieRow({ movie, config, owned }) {
       </div>
 
       {owned ? (
-        <span className="shrink-0 rounded-full border border-primary/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+        <span className="shrink-0 rounded-full border border-primary/40 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
           On shelf
         </span>
       ) : (
-        <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">Not owned</span>
+        <span className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground">Not owned</span>
       )}
     </div>
   );

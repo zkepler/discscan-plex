@@ -62,7 +62,7 @@ export default function FixTitlesButton({ config, discs, onDone, disabled }) {
         {busy ? 'Checking Plex…' : 'Fix titles'}
       </Button>
       {status ? (
-        <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{status}</span>
+        <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{status}</span>
       ) : null}
     </div>
   );

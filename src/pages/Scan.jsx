@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 import BarcodeScanner from '@/components/scan/BarcodeScanner';
 import ScanResultForm from '@/components/scan/ScanResultForm';
 import { Loader2 } from 'lucide-react';
+import { useTabReselect } from '@/lib/tabReset';
 
 export default function Scan() {
   const { toast } = useToast();
@@ -63,9 +64,11 @@ export default function Scan() {
     identify(manual);
   };
 
+  useTabReselect('/scan', reset);
+
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Add to the archive</p>
+      <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Add to the archive</p>
       <h1 className="mt-2 font-display text-4xl leading-none text-foreground sm:text-5xl">Scan a disc</h1>
       <p className="mt-3 max-w-lg text-sm text-muted-foreground">
         Point the camera at the barcode on the case. We look up the title, then check whether it is already in your

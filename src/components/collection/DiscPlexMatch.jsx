@@ -51,7 +51,7 @@ export default function DiscPlexMatch({ discTitle, ratingKey, plexTitle, onLink,
             Not in Plex
           </Button>
         ) : (
-          <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/70">
+          <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground/70">
             Not in Plex
           </span>
         )}
@@ -91,7 +91,7 @@ export default function DiscPlexMatch({ discTitle, ratingKey, plexTitle, onLink,
                   {item.title}
                   {item.year ? <span className="text-muted-foreground"> ({item.year})</span> : null}
                 </span>
-                <span className="flex shrink-0 items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="flex shrink-0 items-center gap-1.5 text-xs uppercase tracking-[0.14em] text-muted-foreground">
                   {KIND_LABEL[item.kind] || 'Title'}
                   <Link2 className="h-3 w-3" />
                 </span>

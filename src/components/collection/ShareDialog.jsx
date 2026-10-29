@@ -74,14 +74,14 @@ export default function ShareDialog({ open, onOpenChange, discs, inPlex }) {
           <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
             <div>
               <p className="text-sm text-foreground">Include every title</p>
-              <p className="text-[11px] text-muted-foreground">Turn off to send just the totals.</p>
+              <p className="text-xs text-muted-foreground">Turn off to send just the totals.</p>
             </div>
             <Switch checked={includeList} onCheckedChange={setIncludeList} />
           </div>
 
           <div className="space-y-1.5">
             <Label>Preview</Label>
-            <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
+            <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
               {email.body}
             </pre>
           </div>
