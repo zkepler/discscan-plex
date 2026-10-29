@@ -2,8 +2,9 @@ import { base44 } from '@/api/base44Client';
 import { fetchLibraryMovies } from '@/lib/plex';
 import { normalizeTitle, pickMatch } from '@/lib/matching';
 import { saveConfig } from '@/lib/appSettings';
+import { ingestPlexMovies, writeWithRetry } from '@/lib/plexStore';
 
-const CHUNK = 100;
+const CHUNK = 500;
 
 export async function syncPlexLibrary(config, onProgress) {
   const { movies, url } = await fetchLibraryMovies(config, onProgress);
@@ -34,14 +35,10 @@ export async function syncPlexLibrary(config, onProgress) {
     });
 
   for (let i = 0; i < updates.length; i += CHUNK) {
-    await base44.entities.Disc.bulkUpdate(updates.slice(i, i + CHUNK));
+    await writeWithRetry(() => base44.entities.Disc.bulkUpdate(updates.slice(i, i + CHUNK)));
   }
 
-  await base44.entities.PlexMovie.deleteMany({});
-  const rows = movies.map((movie) => ({ ...movie, search_title: normalizeTitle(movie.title) }));
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    await base44.entities.PlexMovie.bulkCreate(rows.slice(i, i + CHUNK));
-  }
+  await ingestPlexMovies(movies, onProgress);
 
   await saveConfig({ plex_url: url, last_sync: new Date().toISOString() });
 

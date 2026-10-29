@@ -60,7 +60,7 @@ export default function PlexConnectCard() {
       setConfig(await saveConfig(payload));
       setProgress('Pulling titles from Plex…');
       const result = await syncPlexLibrary(payload, (count, section) =>
-        setProgress(`Reading ${section} · ${count} titles`)
+        setProgress(`${section} · ${count.toLocaleString()} titles`)
       );
 
       setStatus({

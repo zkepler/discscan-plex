@@ -90,7 +90,7 @@ export default function PlexLibrary() {
     setProgress('Reading your Plex library…');
     try {
       const result = await syncPlexLibrary(config, (count, section) =>
-        setProgress(`Reading ${section} · ${count} titles`)
+        setProgress(`${section} · ${count.toLocaleString()} titles`)
       );
       toast({
         title: 'Plex library synced',
