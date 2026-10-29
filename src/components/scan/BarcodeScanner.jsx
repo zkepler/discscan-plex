@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { CameraOff, RotateCw } from 'lucide-react';
 import CameraSelect from '@/components/scan/CameraSelect';
+import PhotoScanButton from '@/components/scan/PhotoScanButton';
 import { useTabActive } from '@/lib/tabActive';
 
 // Continuity Camera (and other front-facing cameras) hand over a mirrored image.
@@ -226,6 +227,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
       </div>
 
       <CameraSelect value={deviceId} onChange={setDeviceId} refreshKey={ready} />
+      <PhotoScanButton onDetected={onDetected} />
     </div>
   );
 }
