@@ -44,7 +44,7 @@ export default function DiscCard({ disc, onSelect }) {
           <Link
             to={`/plex?q=${encodeURIComponent(plexQuery)}`}
             title={`In Plex as ${plexQuery}`}
-            className="text-xs uppercase tracking-[0.12em] text-white/60 transition-colors hover:text-primary"
+            className="text-xs font-semibold uppercase tracking-[0.12em] text-orange-400 transition-colors hover:text-orange-300"
           >
             In Plex
           </Link>
