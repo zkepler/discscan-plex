@@ -15,7 +15,7 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
   const [form, setForm] = useState({
     title: capture.title || '',
     year: capture.year ? String(capture.year) : '',
-    format: 'DVD',
+    format: FORMATS.includes(capture.format) ? capture.format : 'DVD',
     location: '',
   });
 

@@ -70,7 +70,7 @@ export default function TitleSearch({ onPick }) {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-foreground">{result.title}</span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">
-                      {[result.year, result.upc].filter(Boolean).join(' · ') || 'Disc'}
+                      {[result.year, result.format, result.upc].filter(Boolean).join(' · ') || 'Disc'}
                     </span>
                   </span>
                 </button>

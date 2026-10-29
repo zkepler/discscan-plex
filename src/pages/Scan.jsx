@@ -69,6 +69,7 @@ export default function Scan() {
       title: result.title || '',
       image: result.image || '',
       year: result.year || '',
+      format: result.format || '',
       found: true,
     });
   };
