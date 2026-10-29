@@ -1,4 +1,5 @@
 import { posterUrl } from '@/lib/plex';
+import { kindStyle } from '@/lib/mediaStyles';
 
 export default function PlexMovieRow({ movie, config, owned }) {
   return (
@@ -15,19 +16,18 @@ export default function PlexMovieRow({ movie, config, owned }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{movie.title}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate text-sm font-medium text-foreground">{movie.title}</p>
+          <span
+            className={`shrink-0 rounded-full border px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${kindStyle(
+              movie.kind
+            ).className}`}
+          >
+            {kindStyle(movie.kind).label}
+          </span>
+        </div>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {[
-            movie.year || null,
-            movie.kind === 'show'
-              ? 'TV show'
-              : movie.kind === '4k'
-                ? '4K'
-                : movie.resolution
-                  ? movie.resolution.toUpperCase()
-                  : null,
-            movie.library,
-          ]
+          {[movie.year || null, movie.resolution ? movie.resolution.toUpperCase() : null, movie.library]
             .filter(Boolean)
             .join(' · ')}
         </p>

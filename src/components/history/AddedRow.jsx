@@ -1,4 +1,5 @@
 import { posterUrl } from '@/lib/plex';
+import { kindStyle } from '@/lib/mediaStyles';
 
 function addedLabel(seconds) {
   if (!seconds) return 'Added date unknown';
@@ -10,13 +11,8 @@ function addedLabel(seconds) {
 }
 
 export default function AddedRow({ movie, config, owned }) {
-  const meta = [
-    addedLabel(movie.added_at),
-    movie.kind === 'show' ? 'TV show' : movie.kind === '4k' ? '4K' : null,
-    movie.library || null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const meta = [addedLabel(movie.added_at), movie.library || null].filter(Boolean).join(' · ');
+  const kind = kindStyle(movie.kind);
 
   return (
     <div className="flex items-center gap-3 border-b border-border/60 py-2.5 last:border-0">
@@ -32,7 +28,14 @@ export default function AddedRow({ movie, config, owned }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{movie.title}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate text-sm font-medium text-foreground">{movie.title}</p>
+          <span
+            className={`shrink-0 rounded-full border px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${kind.className}`}
+          >
+            {kind.label}
+          </span>
+        </div>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">{meta}</p>
       </div>
 

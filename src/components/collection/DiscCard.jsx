@@ -1,13 +1,5 @@
 import { Link } from 'react-router-dom';
-
-const FORMAT_TONE = {
-  DVD: 'text-foreground/85',
-  'Blu-ray': 'text-sky-300',
-  '4K UHD': 'text-primary',
-  VHS: 'text-amber-300',
-  LaserDisc: 'text-violet-300',
-  Other: 'text-muted-foreground',
-};
+import { formatStyle } from '@/lib/mediaStyles';
 
 export default function DiscCard({ disc, onSelect }) {
   const plexQuery = disc.plex_title || disc.title || '';
@@ -42,9 +34,9 @@ export default function DiscCard({ disc, onSelect }) {
 
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 rounded-t-lg border-b border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm">
         <span
-          className={`text-xs font-semibold uppercase tracking-[0.14em] ${
-            FORMAT_TONE[disc.format] || FORMAT_TONE.Other
-          }`}
+          className={`rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] ${formatStyle(
+            disc.format
+          )}`}
         >
           {disc.format || 'DVD'}
         </span>
