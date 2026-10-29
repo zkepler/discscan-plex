@@ -24,7 +24,7 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
   async function save() {
     if (!form.title.trim()) return;
     setSaving(true);
-    const match = await findPlexMatch(form.title.trim(), form.year);
+    const match = await findPlexMatch(form.title.trim(), form.year, form.format);
     await base44.entities.Disc.create({
       title: form.title.trim(),
       upc: capture.upc,
