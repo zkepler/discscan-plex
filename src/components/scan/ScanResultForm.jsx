@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { findPlexMatch } from '@/lib/matching';
 import { emitDisc } from '@/lib/discEvents';
+import { pullPostersForDiscs } from '@/lib/plexPosters';
 import { FORMATS } from '@/lib/constants';
 import { Check } from 'lucide-react';
 
@@ -55,6 +56,7 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
           plex_title: match?.title || null,
         });
         emitDisc({ type: 'replace', id: draft.id, disc: created });
+        if (match && !draft.cover_url) pullPostersForDiscs([created.id]).catch(() => {});
       } catch (error) {
         emitDisc({ type: 'remove', id: draft.id });
         toast({ variant: 'destructive', title: 'Could not save that disc', description: error.message });

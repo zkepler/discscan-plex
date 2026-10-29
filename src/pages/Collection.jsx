@@ -11,6 +11,7 @@ import DiscDialog from '@/components/collection/DiscDialog';
 import PlexPreview from '@/components/collection/PlexPreview';
 import ShareDialog from '@/components/collection/ShareDialog';
 import FixTitlesButton from '@/components/collection/FixTitlesButton';
+import PullPostersButton from '@/components/collection/PullPostersButton';
 import PullIndicator from '@/components/PullIndicator';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { loadConfig } from '@/lib/appSettings';
@@ -149,6 +150,11 @@ export default function Collection() {
           <FixTitlesButton
             config={config}
             discs={discs}
+            onDone={refresh}
+            disabled={loading || discs.length === 0}
+          />
+          <PullPostersButton
+            config={config}
             onDone={refresh}
             disabled={loading || discs.length === 0}
           />

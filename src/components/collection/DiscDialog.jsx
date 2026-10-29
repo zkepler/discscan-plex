@@ -5,6 +5,7 @@ import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { emitDisc } from '@/lib/discEvents';
+import { pullPostersForDiscs } from '@/lib/plexPosters';
 import DiscForm from '@/components/collection/DiscForm';
 
 export default function DiscDialog({ disc, onClose, onChange }) {
@@ -53,7 +54,12 @@ export default function DiscDialog({ disc, onClose, onChange }) {
     onClose();
 
     base44.entities.Disc.update(shown.id, patch)
-      .then(() => onChange?.())
+      .then(() => {
+        onChange?.();
+        if (patch.plex_rating_key && !shown.cover_url) {
+          pullPostersForDiscs([shown.id]).catch(() => {});
+        }
+      })
       .catch((error) => {
         failed(error);
         onChange?.();
