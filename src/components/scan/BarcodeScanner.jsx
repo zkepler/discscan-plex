@@ -1,23 +1,44 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { CameraOff } from 'lucide-react';
+import { CameraOff, RotateCw } from 'lucide-react';
 import CameraSelect from '@/components/scan/CameraSelect';
 import { useTabActive } from '@/lib/tabActive';
 
 // Continuity Camera (and other front-facing cameras) hand over a mirrored image.
 const MIRRORED_CAMERA = /iphone|continuity|facetime|front/i;
+const ROTATE_KEY = 'shelfmark-scanner-rotated';
 
 export default function BarcodeScanner({ onDetected, paused }) {
   const videoRef = useRef(null);
   const onDetectedRef = useRef(onDetected);
   const pausedRef = useRef(paused);
   const mirroredRef = useRef(false);
+  const rotatedRef = useRef(false);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
   const [deviceId, setDeviceId] = useState('');
   const [mirrored, setMirrored] = useState(false);
+  const [rotated, setRotated] = useState(() => {
+    try {
+      return localStorage.getItem(ROTATE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const [revision, setRevision] = useState(0);
   const tabActive = useTabActive();
+
+  // Some iPhone camera streams (notably in desktop-site mode) arrive upside down.
+  const toggleRotation = () => {
+    const next = !rotatedRef.current;
+    rotatedRef.current = next;
+    setRotated(next);
+    try {
+      localStorage.setItem(ROTATE_KEY, next ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  };
 
   // iOS/iPadOS suspends the camera stream when Safari goes to the background,
   // so the preview is restarted once the app is visible again.
@@ -31,6 +52,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
 
   onDetectedRef.current = onDetected;
   pausedRef.current = paused;
+  rotatedRef.current = rotated;
 
   useEffect(() => {
     // Release the camera while another tab is showing.
@@ -47,6 +69,10 @@ export default function BarcodeScanner({ onDetected, paused }) {
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (rotatedRef.current) {
+        ctx.translate(canvas.width, canvas.height);
+        ctx.rotate(Math.PI);
+      }
       if (flip) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
@@ -136,7 +162,10 @@ export default function BarcodeScanner({ onDetected, paused }) {
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-border bg-black">
         <video
           ref={videoRef}
-          className={`h-full w-full object-cover ${mirrored ? '-scale-x-100' : ''}`}
+          className="h-full w-full object-cover"
+          style={{
+            transform: `rotate(${rotated ? 180 : 0}deg) scaleX(${mirrored ? -1 : 1})`,
+          }}
           autoPlay
           muted
           playsInline
@@ -155,6 +184,14 @@ export default function BarcodeScanner({ onDetected, paused }) {
             <p className="absolute inset-x-0 bottom-3 text-center text-xs uppercase tracking-[0.2em] text-white/70">
               {ready ? 'Hold the barcode inside the frame' : 'Starting camera…'}
             </p>
+            <button
+              type="button"
+              onClick={toggleRotation}
+              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur"
+            >
+              <RotateCw className="h-3.5 w-3.5" />
+              Rotate
+            </button>
           </>
         )}
       </div>
