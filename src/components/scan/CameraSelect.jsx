@@ -23,11 +23,19 @@ export default function CameraSelect({ value, onChange, disabled }) {
       setDevices(found.filter((device) => device.kind === 'videoinput' && device.deviceId));
     };
 
+    // iOS hides camera labels until permission is granted, and the permission
+    // prompt blurs the page — so the list is rebuilt when the app is visible again.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') load().catch(() => {});
+    };
+
     load().catch(() => {});
     navigator.mediaDevices?.addEventListener('devicechange', load);
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       active = false;
       navigator.mediaDevices?.removeEventListener('devicechange', load);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
 

@@ -16,7 +16,18 @@ export default function BarcodeScanner({ onDetected, paused }) {
   const [ready, setReady] = useState(false);
   const [deviceId, setDeviceId] = useState('');
   const [mirrored, setMirrored] = useState(false);
+  const [revision, setRevision] = useState(0);
   const tabActive = useTabActive();
+
+  // iOS/iPadOS suspends the camera stream when Safari goes to the background,
+  // so the preview is restarted once the app is visible again.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setRevision((count) => count + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   onDetectedRef.current = onDetected;
   pausedRef.current = paused;
@@ -57,6 +68,10 @@ export default function BarcodeScanner({ onDetected, paused }) {
     const start = async () => {
       setError('');
       setReady(false);
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError('The camera needs a secure (https) connection. Type the barcode below.');
+        return;
+      }
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: deviceId
@@ -114,7 +129,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
       if (timer) clearInterval(timer);
       stream?.getTracks().forEach((track) => track.stop());
     };
-  }, [deviceId, tabActive]);
+  }, [deviceId, tabActive, revision]);
 
   return (
     <div>
@@ -122,6 +137,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
         <video
           ref={videoRef}
           className={`h-full w-full object-cover ${mirrored ? '-scale-x-100' : ''}`}
+          autoPlay
           muted
           playsInline
         />

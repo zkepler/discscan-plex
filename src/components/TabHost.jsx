@@ -39,7 +39,7 @@ export default function TabHost() {
   useLayoutEffect(() => {
     if (last.current === pathname) return;
     last.current = pathname;
-    window.scrollTo({ top: positions.current[pathname] || 0, left: 0, behavior: 'instant' });
+    window.scrollTo({ top: positions.current[pathname] || 0, left: 0, behavior: 'auto' });
   }, [pathname]);
 
   return (
