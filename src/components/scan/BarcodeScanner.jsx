@@ -3,64 +3,123 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { CameraOff } from 'lucide-react';
 import CameraSelect from '@/components/scan/CameraSelect';
 
+// Continuity Camera (and other front-facing cameras) hand over a mirrored image.
+const MIRRORED_CAMERA = /iphone|continuity|facetime|front/i;
+
 export default function BarcodeScanner({ onDetected, paused }) {
   const videoRef = useRef(null);
   const onDetectedRef = useRef(onDetected);
   const pausedRef = useRef(paused);
+  const mirroredRef = useRef(false);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
   const [deviceId, setDeviceId] = useState('');
+  const [mirrored, setMirrored] = useState(false);
 
   onDetectedRef.current = onDetected;
   pausedRef.current = paused;
 
   useEffect(() => {
     let cancelled = false;
-    let controls = null;
+    let stream = null;
+    let timer = null;
     const reader = new BrowserMultiFormatReader();
-    setError('');
-    setReady(false);
+    const canvas = document.createElement('canvas');
 
-    reader
-      .decodeFromConstraints(
-        {
+    const drawFrame = (video, flip) => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (flip) {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    };
+
+    const read = (video, flip) => {
+      drawFrame(video, flip);
+      try {
+        const result = reader.decodeFromCanvas(canvas);
+        return result ? result.getText() : '';
+      } catch {
+        return '';
+      }
+    };
+
+    const start = async () => {
+      setError('');
+      setReady(false);
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
           video: deviceId
             ? { deviceId: { exact: deviceId } }
             : { facingMode: { ideal: 'environment' } },
-        },
-        videoRef.current,
-        (result) => {
-          if (!result || pausedRef.current) return;
-          onDetectedRef.current?.(result.getText());
-        }
-      )
-      .then((scannerControls) => {
-        if (cancelled) {
-          scannerControls.stop();
-          return;
-        }
-        controls = scannerControls;
-        setReady(true);
-      })
-      .catch((err) => {
+        });
+      } catch (err) {
         if (cancelled) return;
         setError(
           err?.name === 'NotAllowedError'
             ? 'Camera access was blocked. Allow the camera, or type the barcode below.'
             : 'No camera available here. Type the barcode below instead.'
         );
-      });
+        return;
+      }
+
+      if (cancelled) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      const flip = MIRRORED_CAMERA.test(stream.getVideoTracks()[0]?.label || '');
+      mirroredRef.current = flip;
+      setMirrored(flip);
+
+      const video = videoRef.current;
+      if (!video) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+      if (cancelled) return;
+      setReady(true);
+
+      timer = setInterval(() => {
+        const element = videoRef.current;
+        if (pausedRef.current || !element || !element.videoWidth) return;
+        // A mirrored frame hides the barcode, so read the flipped frame first.
+        const passes = mirroredRef.current ? [true, false] : [false];
+        for (const flipPass of passes) {
+          const text = read(element, flipPass);
+          if (text) {
+            onDetectedRef.current?.(text);
+            return;
+          }
+        }
+      }, 250);
+    };
+
+    start();
 
     return () => {
       cancelled = true;
-      controls?.stop();
+      if (timer) clearInterval(timer);
+      stream?.getTracks().forEach((track) => track.stop());
     };
   }, [deviceId]);
 
   return (
     <div>
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-border bg-black">
-        <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+        <video
+          ref={videoRef}
+          className={`h-full w-full object-cover ${mirrored ? '-scale-x-100' : ''}`}
+          muted
+          playsInline
+        />
 
         {error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card px-8 text-center">
