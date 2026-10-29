@@ -7,11 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import AppLayout from './components/AppLayout';
-import Collection from './pages/Collection';
-import Scan from './pages/Scan';
-import PlexLibrary from './pages/PlexLibrary';
-import History from './pages/History';
-import SettingsPage from './pages/SettingsPage';
+import TabHost from './components/TabHost';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -40,11 +36,11 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route path="/" element={<Collection />} />
-        <Route path="/scan" element={<Scan />} />
-        <Route path="/plex" element={<PlexLibrary />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/" element={<TabHost />} />
+        <Route path="/scan" element={<TabHost />} />
+        <Route path="/plex" element={<TabHost />} />
+        <Route path="/history" element={<TabHost />} />
+        <Route path="/settings" element={<TabHost />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

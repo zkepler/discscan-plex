@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
+import { isTabPath } from "@/lib/tabPaths";
 
 const getHashId = (hash) => {
   const rawId = hash.slice(1);
@@ -14,9 +15,16 @@ const getHashId = (hash) => {
 export default function ScrollToTop() {
   const { pathname, hash } = useLocation();
   const navigationType = useNavigationType();
+  const previousPath = useRef(pathname);
 
   useEffect(() => {
+    const from = previousPath.current;
+    previousPath.current = pathname;
+
     if (navigationType === "POP") return;
+
+    // Switching tabs keeps each view's own scroll position.
+    if (from !== pathname && isTabPath(from) && isTabPath(pathname)) return;
 
     if (hash) {
       const id = getHashId(hash);

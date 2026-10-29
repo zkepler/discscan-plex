@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import DiscDialog from '@/components/collection/DiscDialog';
 import PlexPreview from '@/components/collection/PlexPreview';
 import ShareDialog from '@/components/collection/ShareDialog';
 import FixTitlesButton from '@/components/collection/FixTitlesButton';
+import PullIndicator from '@/components/PullIndicator';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { loadConfig } from '@/lib/appSettings';
 import { cn } from '@/lib/utils';
 
@@ -30,7 +32,7 @@ export default function Collection() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
-  const [selected, setSelected] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sharing, setSharing] = useState(false);
 
@@ -65,6 +67,32 @@ export default function Collection() {
 
   const inPlex = discs.filter((disc) => disc.plex_rating_key).length;
 
+  const { pull, refreshing, threshold } = usePullToRefresh(refresh, { disabled: loading });
+
+  const selected = useMemo(
+    () => discs.find((disc) => disc.id === searchParams.get('disc')) || null,
+    [discs, searchParams]
+  );
+
+  const openDisc = (disc) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('disc', disc.id);
+      return next;
+    });
+  };
+
+  const closeDisc = () => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('disc');
+        return next;
+      },
+      { replace: true }
+    );
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return discs
@@ -86,6 +114,8 @@ export default function Collection() {
 
   return (
     <div>
+      <PullIndicator pull={pull} refreshing={refreshing} threshold={threshold} />
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Everything you own</p>
@@ -144,7 +174,7 @@ export default function Collection() {
                 setVisible(PAGE_SIZE);
               }}
               className={cn(
-                'rounded-full px-3 py-1.5 text-xs transition-colors',
+                'select-none rounded-full px-3 py-1.5 text-xs transition-colors',
                 filter === option.id
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'
@@ -185,7 +215,7 @@ export default function Collection() {
         <>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {filtered.slice(0, visible).map((disc) => (
-              <DiscCard key={disc.id} disc={disc} onSelect={setSelected} />
+              <DiscCard key={disc.id} disc={disc} onSelect={openDisc} />
             ))}
           </div>
           {filtered.length > visible ? (
@@ -200,7 +230,7 @@ export default function Collection() {
 
       {!loading ? <PlexPreview items={plexOnly} config={config} plexTotal={plexTotal} /> : null}
 
-      <DiscDialog disc={selected} onClose={() => setSelected(null)} onChange={refresh} />
+      <DiscDialog disc={selected} onClose={closeDisc} onChange={refresh} />
 
       <ShareDialog open={sharing} onOpenChange={setSharing} discs={discs} inPlex={inPlex} />
     </div>

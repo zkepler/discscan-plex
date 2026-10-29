@@ -30,7 +30,7 @@ export default function AppLayout() {
                 end={to === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-2 rounded-full px-3.5 py-2 text-sm transition-colors',
+                    'flex select-none items-center gap-2 rounded-full px-3.5 py-2 text-sm transition-colors',
                     isActive
                       ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
@@ -58,7 +58,7 @@ export default function AppLayout() {
               end={to === '/'}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center gap-1 px-1 py-2.5 text-center text-[10px] uppercase tracking-wider',
+                  'flex select-none flex-col items-center gap-1 px-1 py-2.5 text-center text-[10px] uppercase tracking-wider',
                   isActive ? 'text-primary' : 'text-muted-foreground'
                 )
               }

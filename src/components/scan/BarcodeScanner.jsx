@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { CameraOff } from 'lucide-react';
 import CameraSelect from '@/components/scan/CameraSelect';
+import { useTabActive } from '@/lib/tabActive';
 
 // Continuity Camera (and other front-facing cameras) hand over a mirrored image.
 const MIRRORED_CAMERA = /iphone|continuity|facetime|front/i;
@@ -15,11 +16,15 @@ export default function BarcodeScanner({ onDetected, paused }) {
   const [ready, setReady] = useState(false);
   const [deviceId, setDeviceId] = useState('');
   const [mirrored, setMirrored] = useState(false);
+  const tabActive = useTabActive();
 
   onDetectedRef.current = onDetected;
   pausedRef.current = paused;
 
   useEffect(() => {
+    // Release the camera while another tab is showing.
+    if (!tabActive) return undefined;
+
     let cancelled = false;
     let stream = null;
     let timer = null;
@@ -109,7 +114,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
       if (timer) clearInterval(timer);
       stream?.getTracks().forEach((track) => track.stop());
     };
-  }, [deviceId]);
+  }, [deviceId, tabActive]);
 
   return (
     <div>

@@ -13,7 +13,7 @@ export default function DiscCard({ disc, onSelect }) {
   const plexQuery = disc.plex_title || disc.title || '';
 
   return (
-    <div className="group relative">
+    <div className="group relative select-none">
       <button type="button" onClick={() => onSelect(disc)} className="block w-full text-left">
         <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-border bg-muted shadow-lg shadow-black/30">
           {disc.cover_url ? (

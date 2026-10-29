@@ -15,6 +15,8 @@ import PlexMovieRow from '@/components/plex/PlexMovieRow';
 import { loadConfig } from '@/lib/appSettings';
 import { syncPlexLibrary } from '@/lib/plexSync';
 import { escapeRegex } from '@/lib/matching';
+import PullIndicator from '@/components/PullIndicator';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { ChevronDown, Loader2, RefreshCw, Search, Tv } from 'lucide-react';
 
 const PAGE_SIZE = 50;
@@ -93,6 +95,10 @@ export default function PlexLibrary() {
     };
   }, [debounced, kind, loading, config?.plex_url]);
 
+  const { pull, refreshing, threshold } = usePullToRefresh(load, {
+    disabled: loading || !config?.plex_url || syncing,
+  });
+
   const loadMore = async () => {
     const page = await queryPage(debounced, cursor, kind);
     setMovies((prev) => [...prev, ...(page.items || [])]);
@@ -148,6 +154,8 @@ export default function PlexLibrary() {
 
   return (
     <div>
+      <PullIndicator pull={pull} refreshing={refreshing} threshold={threshold} />
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Synced from your server</p>
@@ -199,6 +207,7 @@ export default function PlexLibrary() {
             key={option.value}
             size="sm"
             variant={kind === option.value ? 'default' : 'outline'}
+            className="select-none"
             onClick={() => setKind(option.value)}
           >
             {option.label}
