@@ -46,6 +46,33 @@ export function buildShareEmail({ discs = [], inPlex = 0, includeList = true, no
   };
 }
 
+const KIND_LABELS = { movie: 'Movie', '4k': '4K', show: 'TV show' };
+
+export function buildRecentPlexEmail({ items = [], note = '' }) {
+  const lines = [];
+
+  if (note.trim()) lines.push(note.trim(), '');
+
+  lines.push(`Recently added to my Plex library: ${items.length} ${items.length === 1 ? 'title' : 'titles'}.`);
+
+  items.forEach((item) => {
+    const bits = [item.year ? String(item.year) : null, KIND_LABELS[item.kind]].filter(Boolean);
+    const when = item.added_at
+      ? new Date(item.added_at * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      : null;
+    lines.push(
+      `- ${item.title || 'Untitled'}${bits.length ? ` (${bits.join(' · ')})` : ''}${when ? ` — added ${when}` : ''}`
+    );
+  });
+
+  lines.push('', 'Shared from Shelfmark');
+
+  return {
+    subject: `Recently added to my Plex — ${items.length} ${items.length === 1 ? 'title' : 'titles'}`,
+    body: lines.join('\n'),
+  };
+}
+
 export function mailtoLink({ to = '', subject = '', body = '' }) {
   const recipient = String(to).trim();
   return `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

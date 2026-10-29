@@ -152,7 +152,11 @@ export default function Collection() {
             onDone={refresh}
             disabled={loading || discs.length === 0}
           />
-          <Button variant="outline" onClick={() => setSharing(true)} disabled={loading || discs.length === 0}>
+          <Button
+            variant="outline"
+            onClick={() => setSharing(true)}
+            disabled={loading || (discs.length === 0 && plexTotal === 0)}
+          >
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </Button>
