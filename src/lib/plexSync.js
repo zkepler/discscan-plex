@@ -2,15 +2,21 @@ import { base44 } from '@/api/base44Client';
 import { fetchLibraryMovies } from '@/lib/plex';
 import { normalizeTitle, pickMatch } from '@/lib/matching';
 import { saveConfig } from '@/lib/appSettings';
-import { ingestPlexMovies, writeWithRetry } from '@/lib/plexStore';
+import { ingestPlexMovies, listAllPlexMovies, writeWithRetry } from '@/lib/plexStore';
 
 const CHUNK = 500;
 
-export async function syncPlexLibrary(config, onProgress) {
-  const { movies, url } = await fetchLibraryMovies(config, onProgress);
+// kinds: null syncs everything, or ['movie'], ['4k'], ['show'] to refresh one category.
+export async function syncPlexLibrary(config, onProgress, kinds = null) {
+  const { movies, url } = await fetchLibraryMovies(config, onProgress, kinds);
+  const stored = await listAllPlexMovies();
+  const scope = kinds?.length ? new Set(kinds) : new Set(movies.map((movie) => movie.kind));
+
+  // Titles from categories we are not syncing stay available for disc matching.
+  const pool = [...stored.filter((row) => !scope.has(row.kind)), ...movies];
 
   const index = new Map();
-  movies.forEach((movie) => {
+  pool.forEach((movie) => {
     const key = normalizeTitle(movie.title);
     if (!index.has(key)) index.set(key, []);
     index.get(key).push(movie);
@@ -38,7 +44,7 @@ export async function syncPlexLibrary(config, onProgress) {
     await writeWithRetry(() => base44.entities.Disc.bulkUpdate(updates.slice(i, i + CHUNK)));
   }
 
-  await ingestPlexMovies(movies, onProgress);
+  await ingestPlexMovies(movies, { onProgress, existing: stored, scope });
 
   await saveConfig({ plex_url: url, last_sync: new Date().toISOString() });
 

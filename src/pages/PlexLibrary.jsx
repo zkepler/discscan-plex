@@ -4,11 +4,18 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import PlexMovieRow from '@/components/plex/PlexMovieRow';
 import { loadConfig } from '@/lib/appSettings';
 import { syncPlexLibrary } from '@/lib/plexSync';
 import { escapeRegex } from '@/lib/matching';
-import { Loader2, RefreshCw, Search, Tv } from 'lucide-react';
+import { ChevronDown, Loader2, RefreshCw, Search, Tv } from 'lucide-react';
 
 const PAGE_SIZE = 50;
 
@@ -42,7 +49,10 @@ export default function PlexLibrary() {
   const [kind, setKind] = useState('all');
   const [debounced, setDebounced] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [syncingScope, setSyncingScope] = useState('all');
   const [progress, setProgress] = useState('');
+
+  const labelFor = (value) => KIND_FILTERS.find((option) => option.value === value)?.label || 'Everything';
 
   const load = async () => {
     const cfg = await loadConfig();
@@ -87,15 +97,18 @@ export default function PlexLibrary() {
     setCursor(page.next_cursor || null);
   };
 
-  const sync = async () => {
+  const sync = async (scope = 'all') => {
     setSyncing(true);
+    setSyncingScope(scope);
     setProgress('Reading your Plex library…');
     try {
-      const result = await syncPlexLibrary(config, (count, section) =>
-        setProgress(`${section} · ${count.toLocaleString()} titles`)
+      const result = await syncPlexLibrary(
+        config,
+        (count, section) => setProgress(`${section} · ${count.toLocaleString()} titles`),
+        scope === 'all' ? null : [scope]
       );
       toast({
-        title: 'Plex library synced',
+        title: `${labelFor(scope)} synced`,
         description: `${result.total} titles · ${result.matched} discs matched`,
       });
       await load();
@@ -143,10 +156,27 @@ export default function PlexLibrary() {
               : 'Never synced'}
           </p>
         </div>
-        <Button onClick={sync} disabled={syncing}>
-          {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-          {syncing ? 'Syncing…' : 'Sync now'}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button disabled={syncing}>
+              {syncing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {syncing ? `Syncing ${labelFor(syncingScope)}…` : 'Sync'}
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Sync from Plex</DropdownMenuLabel>
+            {KIND_FILTERS.map((option) => (
+              <DropdownMenuItem key={option.value} onClick={() => sync(option.value)}>
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {syncing && progress ? <p className="mt-3 text-xs text-primary">{progress}</p> : null}

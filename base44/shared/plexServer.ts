@@ -140,16 +140,24 @@ function is4kTitle(title: string): boolean {
   return /(^|\W)(4k|uhd|2160p?)(\W|$)/i.test(String(title || ''));
 }
 
-export async function fetchPlexMovies(baseUrl: string, token: string) {
+function wantsSection(kind: string, wanted: Set<string> | null): boolean {
+  if (!wanted) return true;
+  if (kind === 'show') return wanted.has('show');
+  return wanted.has('movie') || wanted.has('4k');
+}
+
+export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: string[]) {
+  const wanted = Array.isArray(kinds) && kinds.length ? new Set(kinds) : null;
   const sectionsData = await plexJson(baseUrl, token, '/library/sections');
   const dirs = sectionsData?.MediaContainer?.Directory || [];
-  const sections = dirs
+  const allSections = dirs
     .filter((dir: any) => dir.type === 'movie' || dir.type === 'show')
     .map((dir: any) => ({
       key: String(dir.key),
       title: dir.title || (dir.type === 'show' ? 'TV Shows' : 'Movies'),
       kind: dir.type === 'show' ? 'show' : is4kTitle(dir.title) ? '4k' : 'movie',
     }));
+  const sections = allSections.filter((section: any) => wantsSection(section.kind, wanted));
 
   const byKey = new Map<string, any>();
   for (const section of sections) {
@@ -158,10 +166,12 @@ export async function fetchPlexMovies(baseUrl: string, token: string) {
     items.forEach((item: any) => {
       if (!item?.ratingKey) return;
       const resolution = item.Media?.[0]?.videoResolution || null;
+      const kind = kindFor(section.kind, resolution);
+      if (wanted && !wanted.has(kind)) return;
       byKey.set(String(item.ratingKey), {
         rating_key: String(item.ratingKey),
         title: item.title || 'Untitled',
-        kind: kindFor(section.kind, resolution),
+        kind,
         year: item.year ? Number(item.year) : null,
         thumb: item.thumb || null,
         library: section.title,

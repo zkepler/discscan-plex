@@ -45,10 +45,25 @@ export async function listMovieSections(config) {
     }));
 }
 
+function emptyMessage(kinds) {
+  return kinds?.length
+    ? 'Nothing found in that category on your Plex server.'
+    : 'No movie or TV libraries found on this Plex server.';
+}
+
+function wantsSection(kind, wanted) {
+  if (!wanted) return true;
+  if (kind === 'show') return wanted.has('show');
+  return wanted.has('movie') || wanted.has('4k');
+}
+
 // Used when the server can only be reached from this device (home network, Remote Access off).
-export async function fetchLibraryMoviesInBrowser(config, onProgress) {
-  const sections = await listMovieSections(config);
-  if (!sections.length) throw new Error('No movie or TV libraries found on this Plex server.');
+export async function fetchLibraryMoviesInBrowser(config, onProgress, kinds) {
+  const wanted = kinds?.length ? new Set(kinds) : null;
+  const sections = (await listMovieSections(config)).filter((section) =>
+    wantsSection(section.kind, wanted)
+  );
+  if (!sections.length) throw new Error(emptyMessage(kinds));
 
   const byKey = new Map();
   for (const section of sections) {
@@ -58,14 +73,17 @@ export async function fetchLibraryMoviesInBrowser(config, onProgress) {
     const items = data?.MediaContainer?.Metadata || [];
     items.forEach((item) => {
       if (!item.ratingKey) return;
+      const resolution = item.Media?.[0]?.videoResolution || null;
+      const kind = kindFor(section.kind, resolution);
+      if (wanted && !wanted.has(kind)) return;
       byKey.set(String(item.ratingKey), {
         rating_key: String(item.ratingKey),
         title: item.title || 'Untitled',
-        kind: kindFor(section.kind, item.Media?.[0]?.videoResolution),
+        kind,
         year: item.year ? Number(item.year) : null,
         thumb: item.thumb || null,
         library: section.title,
-        resolution: item.Media?.[0]?.videoResolution || null,
+        resolution,
         duration_ms: item.duration ? Number(item.duration) : null,
         added_at: item.addedAt ? Number(item.addedAt) : null,
       });
@@ -75,15 +93,16 @@ export async function fetchLibraryMoviesInBrowser(config, onProgress) {
   return [...byKey.values()];
 }
 
-export async function fetchLibraryMovies(config, onProgress) {
+export async function fetchLibraryMovies(config, onProgress, kinds) {
   try {
     const response = await base44.functions.invoke('fetchPlexLibrary', {
       plex_url: config.plex_url,
       plex_token: config.plex_token,
+      ...(kinds?.length ? { kinds } : {}),
     });
     const data = response?.data || {};
     const movies = Array.isArray(data.movies) ? data.movies : [];
-    if (!movies.length) throw new Error('No movie or TV libraries found on this Plex server.');
+    if (!movies.length) throw new Error(emptyMessage(kinds));
     onProgress?.(movies.length, 'Plex library');
     return { movies, url: data.url || normalizeBaseUrl(config.plex_url) };
   } catch (error) {
@@ -91,7 +110,7 @@ export async function fetchLibraryMovies(config, onProgress) {
     if (payload?.code !== 'unreachable') {
       throw new Error(payload?.error || error.message || 'Could not read your Plex library.');
     }
-    const movies = await fetchLibraryMoviesInBrowser(config, onProgress);
+    const movies = await fetchLibraryMoviesInBrowser(config, onProgress, kinds);
     return { movies, url: normalizeBaseUrl(config.plex_url) };
   }
 }

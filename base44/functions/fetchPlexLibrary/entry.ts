@@ -17,6 +17,12 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: 'A Plex token is required' }, { status: 400 });
     }
     const requested = String(body?.plex_url || '').trim();
+    const kinds = Array.isArray(body?.kinds)
+      ? body.kinds
+          .map((kind: any) => String(kind))
+          .filter((kind: string) => ['movie', '4k', 'show'].includes(kind))
+          .slice(0, 3)
+      : [];
 
     let baseUrl = '';
     if (requested) {
@@ -38,7 +44,7 @@ export default async function (req: Request): Promise<Response> {
       );
     }
 
-    const { sections, movies } = await fetchPlexMovies(baseUrl, token);
+    const { sections, movies } = await fetchPlexMovies(baseUrl, token, kinds.length ? kinds : undefined);
     return Response.json({ url: baseUrl, sections, movies });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: error.status || 500 });

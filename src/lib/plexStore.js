@@ -30,7 +30,7 @@ export async function writeWithRetry(run) {
   }
 }
 
-async function listAllPlexMovies() {
+export async function listAllPlexMovies() {
   const rows = [];
   let cursor = null;
   do {
@@ -49,10 +49,10 @@ function changed(existing, next) {
 }
 
 // Only writes what actually changed, so repeat syncs cost almost nothing.
-export async function ingestPlexMovies(movies, onProgress) {
+export async function ingestPlexMovies(movies, { onProgress, existing, scope } = {}) {
   const rows = movies.map((movie) => ({ ...movie, search_title: normalizeTitle(movie.title) }));
-  const existing = await listAllPlexMovies();
-  const existingByKey = new Map(existing.map((row) => [String(row.rating_key), row]));
+  const current = existing || (await listAllPlexMovies());
+  const existingByKey = new Map(current.map((row) => [String(row.rating_key), row]));
   const incoming = new Set(rows.map((row) => String(row.rating_key)));
 
   const toCreate = rows.filter((row) => !existingByKey.has(String(row.rating_key)));
@@ -60,8 +60,8 @@ export async function ingestPlexMovies(movies, onProgress) {
     .filter((row) => existingByKey.has(String(row.rating_key)))
     .map((row) => ({ id: existingByKey.get(String(row.rating_key)).id, ...row }))
     .filter((row) => changed(existingByKey.get(String(row.rating_key)), row));
-  const staleKeys = existing
-    .filter((row) => !incoming.has(String(row.rating_key)))
+  const staleKeys = current
+    .filter((row) => !incoming.has(String(row.rating_key)) && (!scope || scope.has(row.kind)))
     .map((row) => row.rating_key);
 
   for (let i = 0; i < toCreate.length; i += CHUNK) {
