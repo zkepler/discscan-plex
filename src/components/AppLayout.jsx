@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Library, ScanLine, Tv, Settings } from 'lucide-react';
+import { History as HistoryIcon, Library, ScanLine, Tv, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
   { to: '/', label: 'Collection', icon: Library },
   { to: '/scan', label: 'Scan', icon: ScanLine },
   { to: '/plex', label: 'Plex', icon: Tv },
+  { to: '/history', label: 'History', icon: HistoryIcon },
   { to: '/settings', label: 'Setup', icon: Settings },
 ];
 
@@ -49,7 +50,7 @@ export default function AppLayout() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden">
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-5">
           {NAV.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}

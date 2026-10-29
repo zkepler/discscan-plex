@@ -10,6 +10,7 @@ import AppLayout from './components/AppLayout';
 import Collection from './pages/Collection';
 import Scan from './pages/Scan';
 import PlexLibrary from './pages/PlexLibrary';
+import History from './pages/History';
 import SettingsPage from './pages/SettingsPage';
 
 const AuthenticatedApp = () => {
@@ -42,6 +43,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Collection />} />
         <Route path="/scan" element={<Scan />} />
         <Route path="/plex" element={<PlexLibrary />} />
+        <Route path="/history" element={<History />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

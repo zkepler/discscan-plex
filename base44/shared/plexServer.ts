@@ -140,6 +140,19 @@ function is4kTitle(title: string): boolean {
   return /(^|\W)(4k|uhd|2160p?)(\W|$)/i.test(String(title || ''));
 }
 
+function progressFor(kind: string, item: any): number {
+  if (kind === 'show') {
+    const total = Number(item.leafCount || 0);
+    const seen = Number(item.viewedLeafCount || 0);
+    if (!total) return 0;
+    return Math.min(100, Math.round((seen / total) * 100));
+  }
+  const duration = Number(item.duration || 0);
+  const offset = Number(item.viewOffset || 0);
+  if (!duration || !offset) return 0;
+  return Math.min(100, Math.round((offset / duration) * 100));
+}
+
 function wantsSection(kind: string, wanted: Set<string> | null): boolean {
   if (!wanted) return true;
   if (kind === 'show') return wanted.has('show');
@@ -178,6 +191,8 @@ export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: st
         resolution,
         duration_ms: item.duration ? Number(item.duration) : null,
         added_at: item.addedAt ? Number(item.addedAt) : null,
+        progress_pct: progressFor(kind, item),
+        last_viewed_at: item.lastViewedAt ? Number(item.lastViewedAt) * 1000 : null,
       });
     });
   }

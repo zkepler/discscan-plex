@@ -38,7 +38,16 @@
       "type": "number"
     },
     "added_at": {
-      "type": "number"
+      "type": "number",
+      "description": "Unix timestamp in seconds for when Plex added the title"
+    },
+    "progress_pct": {
+      "type": "number",
+      "description": "How far through the title you are in Plex, 0-100"
+    },
+    "last_viewed_at": {
+      "type": "number",
+      "description": "Epoch milliseconds of the last time this was watched in Plex"
     }
   },
   "required": [
