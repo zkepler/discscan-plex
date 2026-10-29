@@ -45,9 +45,11 @@ export default function PlexLibrary() {
   const [movies, setMovies] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [ownedKeys, setOwnedKeys] = useState(new Set());
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [kind, setKind] = useState('all');
-  const [debounced, setDebounced] = useState('');
+  const [debounced, setDebounced] = useState(
+    () => (new URLSearchParams(window.location.search).get('q') || '').trim().toLowerCase()
+  );
   const [syncing, setSyncing] = useState(false);
   const [syncingScope, setSyncingScope] = useState('all');
   const [progress, setProgress] = useState('');
