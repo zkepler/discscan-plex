@@ -14,6 +14,7 @@ const TRACKED = [
   'added_at',
   'progress_pct',
   'last_viewed_at',
+  'view_count',
 ];
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

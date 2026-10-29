@@ -18,6 +18,7 @@ import { loadConfig } from '@/lib/appSettings';
 import { cn } from '@/lib/utils';
 import { subscribeDiscs } from '@/lib/discEvents';
 import { groupDiscs } from '@/lib/groupDiscs';
+import { loadWatchStatus } from '@/lib/watchStatus';
 import { useTabReselect } from '@/lib/tabReset';
 
 const FILTERS = [
@@ -30,6 +31,7 @@ const PAGE_SIZE = 48;
 
 export default function Collection() {
   const [discs, setDiscs] = useState([]);
+  const [watch, setWatch] = useState({});
   const [config, setConfig] = useState(null);
   const [plexTotal, setPlexTotal] = useState(0);
   const [plexOnly, setPlexOnly] = useState([]);
@@ -50,6 +52,7 @@ export default function Collection() {
     const [discList, cfg] = await Promise.all([base44.entities.Disc.list(), loadConfig()]);
     setDiscs(discList);
     setConfig(cfg);
+    setWatch(await loadWatchStatus(discList.map((disc) => disc.plex_rating_key)));
 
     if (cfg?.plex_url) {
       const total = await base44.entities.PlexMovie.count({});
@@ -252,7 +255,7 @@ export default function Collection() {
         <>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {groups.slice(0, visible).map((group) => (
-              <DiscCard key={group.key} discs={group.discs} onSelect={openDisc} />
+              <DiscCard key={group.key} discs={group.discs} watch={watch} onSelect={openDisc} />
             ))}
           </div>
           {groups.length > visible ? (

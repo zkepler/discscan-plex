@@ -193,6 +193,7 @@ export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: st
         added_at: item.addedAt ? Number(item.addedAt) : null,
         progress_pct: progressFor(kind, item),
         last_viewed_at: item.lastViewedAt ? Number(item.lastViewedAt) * 1000 : null,
+        view_count: Number(item.viewCount || 0),
       });
     });
   }

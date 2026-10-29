@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import { formatBannerStyle } from '@/lib/mediaStyles';
+import { watchState } from '@/lib/watchStatus';
 
-export default function DiscCard({ discs = [], onSelect }) {
+export default function DiscCard({ discs = [], watch = {}, onSelect }) {
   const primary = discs.find((disc) => disc.cover_url) || discs[0];
   if (!primary) return null;
+
+  const viewed = watchState(discs, watch);
 
   const plexDisc = discs.find((disc) => disc.plex_rating_key);
   const plexQuery = plexDisc?.plex_title || plexDisc?.title || primary.title || '';
@@ -42,10 +46,26 @@ export default function DiscCard({ discs = [], onSelect }) {
               {[primary.year || null, primary.location || null].filter(Boolean).join(' · ')}
             </p>
           </div>
+
+          {viewed && !viewed.watched && viewed.progress ? (
+            <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20">
+              <div className="h-full bg-primary" style={{ width: `${viewed.progress}%` }} />
+            </div>
+          ) : null}
         </div>
       </button>
 
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-end gap-2 rounded-t-lg border-b border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm">
+      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 rounded-t-lg border-b border-white/10 bg-black/70 px-2 py-1.5 backdrop-blur-sm">
+        <span className="flex items-center gap-1 text-xs uppercase tracking-[0.12em]">
+          {viewed?.watched ? (
+            <span className="flex items-center gap-1 font-semibold text-primary">
+              <Check className="h-3 w-3" />
+              Watched
+            </span>
+          ) : viewed?.progress ? (
+            <span className="text-white/70">{viewed.progress}%</span>
+          ) : null}
+        </span>
         {plexDisc ? (
           <Link
             to={`/plex?q=${encodeURIComponent(plexQuery)}`}

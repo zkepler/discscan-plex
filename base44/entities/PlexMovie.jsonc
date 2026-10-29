@@ -48,6 +48,10 @@
     "last_viewed_at": {
       "type": "number",
       "description": "Epoch milliseconds of the last time this was watched in Plex"
+    },
+    "view_count": {
+      "type": "number",
+      "description": "How many times Plex has the title marked as played"
     }
   },
   "required": [
