@@ -14,7 +14,7 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
   const { toast } = useToast();
   const [form, setForm] = useState({
     title: capture.title || '',
-    year: '',
+    year: capture.year ? String(capture.year) : '',
     format: 'DVD',
     location: '',
   });
@@ -129,7 +129,9 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
-        <p className="text-xs text-muted-foreground">Barcode {capture.upc}</p>
+        <p className="text-xs text-muted-foreground">
+          {capture.upc ? `Barcode ${capture.upc}` : 'Added by title'}
+        </p>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={onCancel}>
             Scan another

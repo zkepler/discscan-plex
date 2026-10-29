@@ -6,8 +6,15 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import BarcodeScanner from '@/components/scan/BarcodeScanner';
 import ScanResultForm from '@/components/scan/ScanResultForm';
-import { Loader2 } from 'lucide-react';
+import TitleSearch from '@/components/scan/TitleSearch';
+import { Loader2, ScanLine, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useTabReselect } from '@/lib/tabReset';
+
+const MODES = [
+  { id: 'scan', label: 'Scan barcode', icon: ScanLine },
+  { id: 'title', label: 'Search by title', icon: Search },
+];
 
 export default function Scan() {
   const { toast } = useToast();
@@ -15,6 +22,7 @@ export default function Scan() {
   const [looking, setLooking] = useState(false);
   const [paused, setPaused] = useState(false);
   const [manual, setManual] = useState('');
+  const [mode, setMode] = useState('scan');
   const busyRef = useRef(false);
 
   const identify = useCallback(
@@ -54,6 +62,17 @@ export default function Scan() {
     [toast]
   );
 
+  const pickTitle = (result) => {
+    setPaused(true);
+    setCapture({
+      upc: result.upc || '',
+      title: result.title || '',
+      image: result.image || '',
+      year: result.year || '',
+      found: true,
+    });
+  };
+
   const reset = () => {
     setCapture(null);
     setPaused(false);
@@ -75,9 +94,32 @@ export default function Scan() {
         Plex library.
       </p>
 
+      {!capture ? (
+        <div className="mt-6 grid grid-cols-2 gap-1 rounded-full border border-border p-1">
+          {MODES.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setMode(id)}
+              className={cn(
+                'flex select-none items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs transition-colors',
+                mode === id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="mt-6">
         {capture ? (
           <ScanResultForm capture={capture} onDone={reset} onCancel={reset} />
+        ) : mode === 'title' ? (
+          <TitleSearch onPick={pickTitle} />
         ) : (
           <>
             <BarcodeScanner onDetected={identify} paused={paused} />
@@ -92,7 +134,7 @@ export default function Scan() {
         )}
       </div>
 
-      {!capture ? (
+      {!capture && mode === 'scan' ? (
         <div className="mt-6 rounded-xl border border-border bg-card p-5">
           <Label htmlFor="manual-upc" className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
             Or enter the barcode
