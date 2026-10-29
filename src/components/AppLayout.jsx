@@ -12,7 +12,7 @@ const NAV = [
 export default function AppLayout() {
   return (
     <div className="app-surface min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <NavLink to="/" className="flex items-baseline gap-3">
             <span className="font-display text-2xl leading-none tracking-tight text-foreground">Shelfmark</span>
@@ -44,11 +44,11 @@ export default function AppLayout() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-5 pb-28 pt-8 sm:pb-16">
+      <main className="mx-auto w-full max-w-6xl px-5 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-8 sm:pb-16">
         <Outlet />
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/95 backdrop-blur-xl sm:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden">
         <div className="grid grid-cols-4">
           {NAV.map(({ to, label, icon: Icon }) => (
             <NavLink

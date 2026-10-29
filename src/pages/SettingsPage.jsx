@@ -1,4 +1,5 @@
 import PlexConnectCard from '@/components/settings/PlexConnectCard';
+import AccountCard from '@/components/settings/AccountCard';
 
 export default function SettingsPage() {
   return (
@@ -17,6 +18,8 @@ export default function SettingsPage() {
         it needs to be able to reach the server — on your home network or through Plex Remote Access. Run it again
         whenever you add titles to Plex.
       </p>
+
+      <AccountCard />
     </div>
   );
 }
