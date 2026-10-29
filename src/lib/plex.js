@@ -28,7 +28,8 @@ export async function listMovieSections(config) {
   return dirs.filter((d) => d.type === 'movie').map((d) => ({ key: String(d.key), title: d.title }));
 }
 
-export async function fetchLibraryMovies(config, onProgress) {
+// Used when the server can only be reached from this device (home network, Remote Access off).
+export async function fetchLibraryMoviesInBrowser(config, onProgress) {
   const sections = await listMovieSections(config);
   if (!sections.length) throw new Error('No movie libraries found on this Plex server.');
 
@@ -54,6 +55,27 @@ export async function fetchLibraryMovies(config, onProgress) {
     onProgress?.(byKey.size, section.title);
   }
   return [...byKey.values()];
+}
+
+export async function fetchLibraryMovies(config, onProgress) {
+  try {
+    const response = await base44.functions.invoke('fetchPlexLibrary', {
+      plex_url: config.plex_url,
+      plex_token: config.plex_token,
+    });
+    const data = response?.data || {};
+    const movies = Array.isArray(data.movies) ? data.movies : [];
+    if (!movies.length) throw new Error('No movie libraries found on this Plex server.');
+    onProgress?.(movies.length, 'Plex library');
+    return { movies, url: data.url || normalizeBaseUrl(config.plex_url) };
+  } catch (error) {
+    const payload = error?.response?.data;
+    if (payload?.code !== 'unreachable') {
+      throw new Error(payload?.error || error.message || 'Could not read your Plex library.');
+    }
+    const movies = await fetchLibraryMoviesInBrowser(config, onProgress);
+    return { movies, url: normalizeBaseUrl(config.plex_url) };
+  }
 }
 
 export function posterUrl(config, thumb, width = 300) {
@@ -85,7 +107,7 @@ function rankConnections(connections = []) {
 async function discoverServers(token) {
   try {
     const response = await base44.functions.invoke('discoverPlexServers', { token });
-    return response?.data?.servers || [];
+    return response?.data || {};
   } catch (error) {
     throw new Error(
       error?.response?.data?.error || 'Could not look up the servers linked to that token.'
@@ -94,14 +116,24 @@ async function discoverServers(token) {
 }
 
 export async function findReachableServer(token) {
-  const servers = await discoverServers(String(token || '').trim());
+  const trimmed = String(token || '').trim();
+  const data = await discoverServers(trimmed);
+  const servers = data?.servers || [];
   if (!servers.length) throw new Error('No Plex servers are linked to that token.');
 
+  if (data.resolvedUrl) {
+    const owner = servers.find((server) =>
+      (server.connections || []).some((connection) => normalizeBaseUrl(connection.uri) === data.resolvedUrl)
+    );
+    return { name: data.resolvedName || owner?.name || servers[0].name, url: data.resolvedUrl };
+  }
+
+  // Nothing answered from the internet — try the addresses this device can reach itself.
   for (const server of servers) {
     for (const connection of rankConnections(server.connections)) {
       const base = normalizeBaseUrl(connection.uri);
       try {
-        await getJson(plexUrl(base, token, '/identity'));
+        await getJson(plexUrl(base, trimmed, '/identity'));
         return { name: server.name, url: base, machineId: server.machineId };
       } catch (attempt) {
         // try the next address for this server
@@ -110,6 +142,6 @@ export async function findReachableServer(token) {
   }
 
   throw new Error(
-    'Your server didn’t answer from this browser. Check that it’s running, then paste its address from Plex → Settings → Remote Access.'
+    'Your server didn’t answer. Turn on Remote Access in Plex → Settings so Shelfmark can reach it from anywhere, then try again.'
   );
 }

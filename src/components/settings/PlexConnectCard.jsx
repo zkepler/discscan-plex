@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import ConnectStatus from '@/components/settings/ConnectStatus';
 import { loadConfig, saveConfig } from '@/lib/appSettings';
-import { findReachableServer, listMovieSections, normalizeBaseUrl } from '@/lib/plex';
+import { findReachableServer, normalizeBaseUrl } from '@/lib/plex';
 import { syncPlexLibrary } from '@/lib/plexSync';
 import { Loader2, Sparkles } from 'lucide-react';
 
@@ -46,14 +46,19 @@ export default function PlexConnectCard() {
   const connect = async () => {
     setBusy('import');
     setStatus(null);
-    const payload = { plex_url: normalizeBaseUrl(url), plex_token: token.trim() };
+    const trimmedToken = token.trim();
     try {
-      setProgress('Checking your movie libraries…');
-      const sections = await listMovieSections(payload);
-      if (!sections.length) throw new Error('Connected, but this server has no movie libraries.');
+      let target = normalizeBaseUrl(url);
+      if (!target) {
+        setProgress('Locating your server…');
+        const server = await findReachableServer(trimmedToken);
+        target = server.url;
+        setUrl(target);
+      }
 
+      const payload = { plex_url: target, plex_token: trimmedToken };
       setConfig(await saveConfig(payload));
-      setProgress('Importing titles…');
+      setProgress('Pulling titles from Plex…');
       const result = await syncPlexLibrary(payload, (count, section) =>
         setProgress(`Reading ${section} · ${count} titles`)
       );
@@ -119,7 +124,7 @@ export default function PlexConnectCard() {
           )}
           Find my server
         </Button>
-        <Button onClick={connect} disabled={working || !url || !token}>
+        <Button onClick={connect} disabled={working || !token}>
           {busy === 'import' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {busy === 'import' ? 'Importing…' : 'Connect & import library'}
         </Button>

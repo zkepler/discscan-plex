@@ -6,7 +6,7 @@ import { saveConfig } from '@/lib/appSettings';
 const CHUNK = 100;
 
 export async function syncPlexLibrary(config, onProgress) {
-  const movies = await fetchLibraryMovies(config, onProgress);
+  const { movies, url } = await fetchLibraryMovies(config, onProgress);
 
   const index = new Map();
   movies.forEach((movie) => {
@@ -43,7 +43,7 @@ export async function syncPlexLibrary(config, onProgress) {
     await base44.entities.PlexMovie.bulkCreate(rows.slice(i, i + CHUNK));
   }
 
-  await saveConfig({ last_sync: new Date().toISOString() });
+  await saveConfig({ plex_url: url, last_sync: new Date().toISOString() });
 
   return { total: movies.length, matched: updates.filter((u) => u.plex_rating_key).length };
 }

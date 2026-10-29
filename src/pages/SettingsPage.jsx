@@ -14,9 +14,9 @@ export default function SettingsPage() {
       <PlexConnectCard />
 
       <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-        Your token is stored with this app and only used to read your library. Importing runs from this browser, so
-        it needs to be able to reach the server — on your home network or through Plex Remote Access. Run it again
-        whenever you add titles to Plex.
+        Your token is stored with this app and only used to read your library. Shelfmark reaches the server through
+        Plex Remote Access, so syncing works from anywhere — just turn Remote Access on in Plex → Settings, then run
+        a sync whenever you add titles.
       </p>
 
       <AccountCard />
