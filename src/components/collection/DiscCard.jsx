@@ -46,22 +46,22 @@ export default function DiscCard({ discs = [], watch = {}, onSelect, onAddFormat
           className="absolute inset-0 z-0"
         />
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2.5 pt-12">
-          <div className="pointer-events-auto mb-1.5 flex flex-wrap gap-1">
-            {formatEntries.map(({ format, disc }) => (
-              <button
-                key={disc.id}
-                type="button"
-                onClick={() => onSelect(disc)}
-                className={`rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-[0.12em] shadow-sm transition-opacity hover:opacity-90 ${formatBannerStyle(
-                  format
-                )}`}
-              >
-                {format}
-              </button>
-            ))}
-          </div>
+        <div className="absolute left-0 top-9 z-10 flex flex-col items-start gap-1 py-1 pl-1.5">
+          {formatEntries.map(({ format, disc }) => (
+            <button
+              key={disc.id}
+              type="button"
+              onClick={() => onSelect(disc)}
+              className={`rounded px-1.5 py-0.5 text-xs font-medium uppercase tracking-[0.1em] shadow-sm transition-opacity hover:opacity-90 ${formatBannerStyle(
+                format
+              )}`}
+            >
+              {format}
+            </button>
+          ))}
+        </div>
 
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2.5 pt-12">
           <button
             type="button"
             onClick={() => onSelect(primary)}
