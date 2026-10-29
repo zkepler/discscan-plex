@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import DiscPlexMatch from '@/components/collection/DiscPlexMatch';
+import DiscExternalLinks from '@/components/collection/DiscExternalLinks';
 import FormatPicker from '@/components/collection/FormatPicker';
 
 export default function DiscForm({ disc, form, set, confirming, onSave, onRemove, onClose }) {
@@ -65,6 +66,7 @@ export default function DiscForm({ disc, form, set, confirming, onSave, onRemove
             set('plex_title', '');
           }}
         />
+        <DiscExternalLinks title={form.title} year={form.year} />
         {disc.upc ? <p className="text-xs text-muted-foreground">Barcode {disc.upc}</p> : null}
       </div>
 
