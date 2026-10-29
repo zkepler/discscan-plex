@@ -1,0 +1,38 @@
+{
+  "name": "PlexMovie",
+  "type": "object",
+  "properties": {
+    "rating_key": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "search_title": {
+      "type": "string",
+      "description": "Normalized lowercase title used for search and matching"
+    },
+    "year": {
+      "type": "number"
+    },
+    "thumb": {
+      "type": "string"
+    },
+    "library": {
+      "type": "string"
+    },
+    "resolution": {
+      "type": "string"
+    },
+    "duration_ms": {
+      "type": "number"
+    },
+    "added_at": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "rating_key",
+    "title"
+  ]
+}

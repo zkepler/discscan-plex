@@ -1,0 +1,21 @@
+{
+  "name": "PlexConfig",
+  "type": "object",
+  "properties": {
+    "plex_url": {
+      "type": "string",
+      "description": "Base URL of the Plex Media Server"
+    },
+    "plex_token": {
+      "type": "string",
+      "description": "Plex authentication token (X-Plex-Token)"
+    },
+    "server_name": {
+      "type": "string"
+    },
+    "last_sync": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

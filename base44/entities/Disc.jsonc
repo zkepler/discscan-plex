@@ -1,0 +1,48 @@
+{
+  "name": "Disc",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title of the disc"
+    },
+    "upc": {
+      "type": "string",
+      "description": "Barcode (UPC/EAN) on the case"
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "DVD",
+        "Blu-ray",
+        "4K UHD",
+        "LaserDisc",
+        "Other"
+      ],
+      "default": "DVD"
+    },
+    "year": {
+      "type": "number"
+    },
+    "cover_url": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string",
+      "description": "Where the disc physically lives"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "plex_rating_key": {
+      "type": "string",
+      "description": "Matching Plex library item key, when present in Plex"
+    },
+    "plex_title": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}
