@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { formatChipStyle } from '@/lib/mediaStyles';
+import { formatBannerStyle } from '@/lib/mediaStyles';
 
 export default function DiscCard({ discs = [], onSelect }) {
   const primary = discs.find((disc) => disc.cover_url) || discs[0];
@@ -59,13 +59,13 @@ export default function DiscCard({ discs = [], onSelect }) {
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-1">
+      <div className="mt-2 space-y-1">
         {formatEntries.map(({ format, disc }) => (
           <button
             key={disc.id}
             type="button"
             onClick={() => onSelect(disc)}
-            className={`rounded-full border px-2 py-0.5 text-xs font-bold uppercase tracking-[0.12em] ${formatChipStyle(
+            className={`block w-full rounded-md px-2 py-1 text-center text-xs font-bold uppercase tracking-[0.14em] shadow-sm transition-opacity hover:opacity-90 ${formatBannerStyle(
               format
             )}`}
           >
