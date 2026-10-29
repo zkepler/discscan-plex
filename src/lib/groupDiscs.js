@@ -12,8 +12,10 @@ export const baseTitle = (title) =>
       .replace(EDITION_NOISE, ' ')
   );
 
-// Two copies that disagree only by a year (or when one has no year) are still the same movie.
+// Copies matched to the same Plex title are the same film, whatever their titles say.
+// Otherwise two copies that disagree only by a year (or when one has no year) still link.
 const sameFilm = (group, disc) => {
+  if (group.plexKey && disc.plex_rating_key) return group.plexKey === disc.plex_rating_key;
   if (group.base !== baseTitle(disc.title)) return false;
   if (!group.year || !disc.year) return true;
   return Math.abs(group.year - disc.year) <= 1;
@@ -24,11 +26,19 @@ export const groupDiscs = (discs) => {
 
   discs.forEach((disc) => {
     const group = groups.find((candidate) => sameFilm(candidate, disc));
+    const base = baseTitle(disc.title);
     if (group) {
       group.discs.push(disc);
       group.year = group.year || disc.year;
+      group.plexKey = group.plexKey || disc.plex_rating_key || '';
     } else {
-      groups.push({ key: `${baseTitle(disc.title)}|${disc.year || ''}`, base: baseTitle(disc.title), year: disc.year, discs: [disc] });
+      groups.push({
+        key: `${disc.plex_rating_key || base}|${disc.year || ''}`,
+        base,
+        year: disc.year,
+        plexKey: disc.plex_rating_key || '',
+        discs: [disc],
+      });
     }
   });
 
