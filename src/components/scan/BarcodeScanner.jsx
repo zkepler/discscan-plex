@@ -1,23 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { CameraOff, RotateCw } from 'lucide-react';
+import { CameraOff, Maximize2, Minimize2, RotateCw, SwitchCamera } from 'lucide-react';
 import CameraSelect from '@/components/scan/CameraSelect';
 import { useTabActive } from '@/lib/tabActive';
 
 // Continuity Camera (and other front-facing cameras) hand over a mirrored image.
 const MIRRORED_CAMERA = /iphone|continuity|facetime|front/i;
 const ROTATE_KEY = 'shelfmark-scanner-rotated';
+// The chosen lens is remembered, so the scanner reopens on the camera you used last.
+const FACING_KEY = 'shelfmark-scanner-facing';
 // iPads hand over large frames; decoding a downscaled copy keeps scanning snappy.
 const MAX_DECODE_WIDTH = 1280;
 
 // iPadOS keeps the camera busied for a moment after a stream is released, and
 // only some iPads accept an exact rear-camera request — so constraints are
 // tried in turn instead of failing on the first refusal.
-const cameraAttempts = (deviceId) =>
+const cameraAttempts = (deviceId, facing) =>
   deviceId
-    ? [{ deviceId: { exact: deviceId } }, { deviceId }, { facingMode: { ideal: 'environment' } }]
+    ? [{ deviceId: { exact: deviceId } }, { deviceId }, { facingMode: { ideal: facing } }]
     : [
-        { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        { facingMode: { exact: facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        { facingMode: { ideal: facing } },
         { facingMode: { ideal: 'environment' } },
         true,
       ];
@@ -40,7 +43,36 @@ export default function BarcodeScanner({ onDetected, paused }) {
     }
   });
   const [revision, setRevision] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [facing, setFacing] = useState(() => {
+    try {
+      return localStorage.getItem(FACING_KEY) === 'user' ? 'user' : 'environment';
+    } catch {
+      return 'environment';
+    }
+  });
   const tabActive = useTabActive();
+
+  // One tap swaps front and rear, and the choice sticks for next time.
+  const flipCamera = () => {
+    const next = facing === 'user' ? 'environment' : 'user';
+    setFacing(next);
+    setDeviceId('');
+    try {
+      localStorage.setItem(FACING_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    if (!fullscreen) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') setFullscreen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fullscreen]);
 
   // Some iPhone camera streams (notably in desktop-site mode) arrive upside down.
   const toggleRotation = () => {
@@ -115,7 +147,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
         return;
       }
       try {
-        for (const video of cameraAttempts(deviceId)) {
+        for (const video of cameraAttempts(deviceId, facing)) {
           for (let attempt = 0; attempt < 2; attempt += 1) {
             try {
               stream = await navigator.mediaDevices.getUserMedia({ video });
@@ -148,7 +180,8 @@ export default function BarcodeScanner({ onDetected, paused }) {
         return;
       }
 
-      const flip = MIRRORED_CAMERA.test(stream.getVideoTracks()[0]?.label || '');
+      const label = stream.getVideoTracks()[0]?.label || '';
+      const flip = (!deviceId && facing === 'user') || MIRRORED_CAMERA.test(label);
       mirroredRef.current = flip;
       setMirrored(flip);
 
@@ -184,11 +217,17 @@ export default function BarcodeScanner({ onDetected, paused }) {
       if (timer) clearInterval(timer);
       stream?.getTracks().forEach((track) => track.stop());
     };
-  }, [deviceId, tabActive, revision]);
+  }, [deviceId, facing, tabActive, revision]);
 
   return (
-    <div>
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-border bg-black">
+    <div className={fullscreen ? 'fixed inset-0 z-50 flex flex-col bg-black' : ''}>
+      <div
+        className={
+          fullscreen
+            ? 'relative w-full flex-1 overflow-hidden bg-black'
+            : 'relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-border bg-black'
+        }
+      >
         <video
           ref={videoRef}
           className="h-full w-full object-cover"
@@ -204,6 +243,15 @@ export default function BarcodeScanner({ onDetected, paused }) {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card px-8 text-center">
             <CameraOff className="h-6 w-6 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">{error}</p>
+            {fullscreen ? (
+              <button
+                type="button"
+                onClick={() => setFullscreen(false)}
+                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium"
+              >
+                Exit full screen
+              </button>
+            ) : null}
           </div>
         ) : (
           <>
@@ -213,19 +261,40 @@ export default function BarcodeScanner({ onDetected, paused }) {
             <p className="absolute inset-x-0 bottom-3 text-center text-xs uppercase tracking-[0.2em] text-white/70">
               {ready ? 'Hold the barcode inside the frame' : 'Starting camera…'}
             </p>
-            <button
-              type="button"
-              onClick={toggleRotation}
-              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur"
-            >
-              <RotateCw className="h-3.5 w-3.5" />
-              Rotate
-            </button>
+            <div className="absolute right-3 top-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={flipCamera}
+                aria-label="Switch between front and rear camera"
+                className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black shadow-sm"
+              >
+                <SwitchCamera className="h-4 w-4" />
+                Flip
+              </button>
+              <button
+                type="button"
+                onClick={toggleRotation}
+                aria-label="Rotate the camera preview"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
+              >
+                <RotateCw className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setFullscreen((value) => !value)}
+                aria-label={fullscreen ? 'Exit full screen' : 'Scan in full screen'}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
+              >
+                {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
+            </div>
           </>
         )}
       </div>
 
-      <CameraSelect value={deviceId} onChange={setDeviceId} refreshKey={ready} />
+      {fullscreen ? null : (
+        <CameraSelect value={deviceId} onChange={setDeviceId} refreshKey={ready} />
+      )}
     </div>
   );
 }
