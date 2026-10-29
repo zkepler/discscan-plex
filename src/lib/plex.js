@@ -25,13 +25,19 @@ async function getJson(url) {
 export async function listMovieSections(config) {
   const data = await getJson(plexUrl(config.plex_url, config.plex_token, '/library/sections'));
   const dirs = data?.MediaContainer?.Directory || [];
-  return dirs.filter((d) => d.type === 'movie').map((d) => ({ key: String(d.key), title: d.title }));
+  return dirs
+    .filter((d) => d.type === 'movie' || d.type === 'show')
+    .map((d) => ({
+      key: String(d.key),
+      title: d.title,
+      kind: d.type === 'show' ? 'show' : 'movie',
+    }));
 }
 
 // Used when the server can only be reached from this device (home network, Remote Access off).
 export async function fetchLibraryMoviesInBrowser(config, onProgress) {
   const sections = await listMovieSections(config);
-  if (!sections.length) throw new Error('No movie libraries found on this Plex server.');
+  if (!sections.length) throw new Error('No movie or TV libraries found on this Plex server.');
 
   const byKey = new Map();
   for (const section of sections) {
@@ -44,6 +50,7 @@ export async function fetchLibraryMoviesInBrowser(config, onProgress) {
       byKey.set(String(item.ratingKey), {
         rating_key: String(item.ratingKey),
         title: item.title || 'Untitled',
+        kind: section.kind,
         year: item.year ? Number(item.year) : null,
         thumb: item.thumb || null,
         library: section.title,
@@ -65,7 +72,7 @@ export async function fetchLibraryMovies(config, onProgress) {
     });
     const data = response?.data || {};
     const movies = Array.isArray(data.movies) ? data.movies : [];
-    if (!movies.length) throw new Error('No movie libraries found on this Plex server.');
+    if (!movies.length) throw new Error('No movie or TV libraries found on this Plex server.');
     onProgress?.(movies.length, 'Plex library');
     return { movies, url: data.url || normalizeBaseUrl(config.plex_url) };
   } catch (error) {

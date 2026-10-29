@@ -17,7 +17,11 @@ export default function PlexMovieRow({ movie, config, owned }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{movie.title}</p>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-          {[movie.year || null, movie.resolution ? movie.resolution.toUpperCase() : null, movie.library]
+          {[
+            movie.year || null,
+            movie.kind === 'show' ? 'TV show' : movie.resolution ? movie.resolution.toUpperCase() : null,
+            movie.library,
+          ]
             .filter(Boolean)
             .join(' · ')}
         </p>

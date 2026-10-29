@@ -7,8 +7,8 @@ export default function SettingsPage() {
       <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">One-time setup</p>
       <h1 className="mt-2 font-display text-4xl leading-none text-foreground sm:text-5xl">Connect Plex</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        Paste your Plex token and Shelfmark finds your server, then pulls your whole movie library into the
-        catalogue in one go.
+        Paste your Plex token and Shelfmark finds your server, then pulls your movie, 4K and TV show libraries into
+        the catalogue in one go.
       </p>
 
       <PlexConnectCard />

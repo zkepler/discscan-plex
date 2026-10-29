@@ -12,8 +12,16 @@ import { Loader2, RefreshCw, Search, Tv } from 'lucide-react';
 
 const PAGE_SIZE = 50;
 
-function queryPage(query, cursor) {
+const KIND_FILTERS = [
+  { value: 'all', label: 'Everything' },
+  { value: 'movie', label: 'Movies' },
+  { value: 'show', label: 'TV shows' },
+];
+
+function queryPage(query, cursor, kind = 'all') {
   const filter = query ? { search_title: { $regex: escapeRegex(query) } } : {};
+  if (kind === 'show') filter.kind = 'show';
+  else if (kind === 'movie') filter.kind = { $ne: 'show' };
   return base44.entities.PlexMovie.filter(filter, {
     sort: 'title',
     limit: PAGE_SIZE,
@@ -29,6 +37,7 @@ export default function PlexLibrary() {
   const [cursor, setCursor] = useState(null);
   const [ownedKeys, setOwnedKeys] = useState(new Set());
   const [query, setQuery] = useState('');
+  const [kind, setKind] = useState('all');
   const [debounced, setDebounced] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [progress, setProgress] = useState('');
@@ -40,7 +49,7 @@ export default function PlexLibrary() {
       setLoading(false);
       return;
     }
-    const [discs, page] = await Promise.all([base44.entities.Disc.list(), queryPage('', null)]);
+    const [discs, page] = await Promise.all([base44.entities.Disc.list(), queryPage('', null, kind)]);
     setOwnedKeys(new Set(discs.map((disc) => disc.plex_rating_key).filter(Boolean)));
     setMovies(page.items || []);
     setCursor(page.next_cursor || null);
@@ -60,7 +69,7 @@ export default function PlexLibrary() {
     if (loading || !config?.plex_url) return;
     let active = true;
     (async () => {
-      const page = await queryPage(debounced, null);
+      const page = await queryPage(debounced, null, kind);
       if (!active) return;
       setMovies(page.items || []);
       setCursor(page.next_cursor || null);
@@ -68,10 +77,10 @@ export default function PlexLibrary() {
     return () => {
       active = false;
     };
-  }, [debounced, loading, config?.plex_url]);
+  }, [debounced, kind, loading, config?.plex_url]);
 
   const loadMore = async () => {
-    const page = await queryPage(debounced, cursor);
+    const page = await queryPage(debounced, cursor, kind);
     setMovies((prev) => [...prev, ...(page.items || [])]);
     setCursor(page.next_cursor || null);
   };
@@ -111,7 +120,7 @@ export default function PlexLibrary() {
         <Tv className="mx-auto h-7 w-7 text-muted-foreground" />
         <h1 className="mt-4 font-display text-2xl text-foreground">Plex isn’t connected yet</h1>
         <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-          Add your Plex server address and token once, then pull your whole movie library into the catalogue.
+          Add your Plex server address and token once, then pull your movies and TV shows into the catalogue.
         </p>
         <Button asChild className="mt-5">
           <Link to="/settings">Connect Plex</Link>
@@ -148,6 +157,19 @@ export default function PlexLibrary() {
           placeholder="Search your Plex library"
           className="pl-9"
         />
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {KIND_FILTERS.map((option) => (
+          <Button
+            key={option.value}
+            size="sm"
+            variant={kind === option.value ? 'default' : 'outline'}
+            onClick={() => setKind(option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
       </div>
 
       <div className="mt-4 rounded-xl border border-border bg-card px-4">

@@ -12,6 +12,15 @@
       "type": "string",
       "description": "Normalized lowercase title used for search and matching"
     },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "movie",
+        "show"
+      ],
+      "default": "movie",
+      "description": "Plex library type this title came from"
+    },
     "year": {
       "type": "number"
     },

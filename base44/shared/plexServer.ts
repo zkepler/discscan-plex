@@ -133,8 +133,12 @@ export async function fetchPlexMovies(baseUrl: string, token: string) {
   const sectionsData = await plexJson(baseUrl, token, '/library/sections');
   const dirs = sectionsData?.MediaContainer?.Directory || [];
   const sections = dirs
-    .filter((dir: any) => dir.type === 'movie')
-    .map((dir: any) => ({ key: String(dir.key), title: dir.title || 'Movies' }));
+    .filter((dir: any) => dir.type === 'movie' || dir.type === 'show')
+    .map((dir: any) => ({
+      key: String(dir.key),
+      title: dir.title || (dir.type === 'show' ? 'TV Shows' : 'Movies'),
+      kind: dir.type === 'show' ? 'show' : 'movie',
+    }));
 
   const byKey = new Map<string, any>();
   for (const section of sections) {
@@ -145,6 +149,7 @@ export async function fetchPlexMovies(baseUrl: string, token: string) {
       byKey.set(String(item.ratingKey), {
         rating_key: String(item.ratingKey),
         title: item.title || 'Untitled',
+        kind: section.kind,
         year: item.year ? Number(item.year) : null,
         thumb: item.thumb || null,
         library: section.title,
