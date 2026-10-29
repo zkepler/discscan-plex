@@ -7,6 +7,20 @@ import { useTabActive } from '@/lib/tabActive';
 // Continuity Camera (and other front-facing cameras) hand over a mirrored image.
 const MIRRORED_CAMERA = /iphone|continuity|facetime|front/i;
 const ROTATE_KEY = 'shelfmark-scanner-rotated';
+// iPads hand over large frames; decoding a downscaled copy keeps scanning snappy.
+const MAX_DECODE_WIDTH = 1280;
+
+// iPadOS keeps the camera busied for a moment after a stream is released, and
+// only some iPads accept an exact rear-camera request — so constraints are
+// tried in turn instead of failing on the first refusal.
+const cameraAttempts = (deviceId) =>
+  deviceId
+    ? [{ deviceId: { exact: deviceId } }, { deviceId }, { facingMode: { ideal: 'environment' } }]
+    : [
+        { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        { facingMode: { ideal: 'environment' } },
+        true,
+      ];
 
 export default function BarcodeScanner({ onDetected, paused }) {
   const videoRef = useRef(null);
@@ -61,12 +75,14 @@ export default function BarcodeScanner({ onDetected, paused }) {
     let cancelled = false;
     let stream = null;
     let timer = null;
+    let lastError = null;
     const reader = new BrowserMultiFormatReader();
     const canvas = document.createElement('canvas');
 
     const drawFrame = (video, flip) => {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const scale = Math.min(1, MAX_DECODE_WIDTH / video.videoWidth);
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       if (rotatedRef.current) {
@@ -99,17 +115,30 @@ export default function BarcodeScanner({ onDetected, paused }) {
         return;
       }
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: deviceId
-            ? { deviceId: { exact: deviceId } }
-            : { facingMode: { ideal: 'environment' } },
-        });
+        for (const video of cameraAttempts(deviceId)) {
+          for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ video });
+              break;
+            } catch (err) {
+              lastError = err;
+              // A blocked permission is final; a busy camera just needs a breather.
+              if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') throw err;
+              if (err?.name !== 'NotReadableError' && err?.name !== 'AbortError') break;
+              await new Promise((resolve) => setTimeout(resolve, 350));
+            }
+          }
+          if (stream || cancelled) break;
+        }
+        if (!stream) throw lastError;
       } catch (err) {
         if (cancelled) return;
         setError(
           err?.name === 'NotAllowedError'
             ? 'Camera access was blocked. Allow the camera, or type the barcode below.'
-            : 'No camera available here. Type the barcode below instead.'
+            : err?.name === 'NotReadableError'
+              ? 'The camera is in use by another app. Close it and try again, or type the barcode below.'
+              : 'No camera available here. Type the barcode below instead.'
         );
         return;
       }
@@ -196,7 +225,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
         )}
       </div>
 
-      <CameraSelect value={deviceId} onChange={setDeviceId} />
+      <CameraSelect value={deviceId} onChange={setDeviceId} refreshKey={ready} />
     </div>
   );
 }

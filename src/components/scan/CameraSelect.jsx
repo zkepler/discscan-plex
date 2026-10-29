@@ -9,8 +9,8 @@ import {
 } from '@/components/ui/select';
 
 // Lists every camera the browser can reach, so an iPhone used through
-// Continuity Camera shows up as its own option alongside the built-in one.
-export default function CameraSelect({ value, onChange, disabled }) {
+// Continuity Camera — or an iPad's front/rear cameras — shows up as its own option.
+export default function CameraSelect({ value, onChange, disabled, refreshKey }) {
   const [devices, setDevices] = useState([]);
 
   useEffect(() => {
@@ -23,8 +23,9 @@ export default function CameraSelect({ value, onChange, disabled }) {
       setDevices(found.filter((device) => device.kind === 'videoinput' && device.deviceId));
     };
 
-    // iOS hides camera labels until permission is granted, and the permission
-    // prompt blurs the page — so the list is rebuilt when the app is visible again.
+    // iOS/iPadOS hides camera labels until permission is granted, and the
+    // permission prompt blurs the page — so the list is rebuilt when the app is
+    // visible again, and again once the scanner has a live stream (refreshKey).
     const onVisible = () => {
       if (document.visibilityState === 'visible') load().catch(() => {});
     };
@@ -37,7 +38,7 @@ export default function CameraSelect({ value, onChange, disabled }) {
       navigator.mediaDevices?.removeEventListener('devicechange', load);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, []);
+  }, [refreshKey]);
 
   if (devices.length < 2) return null;
 
