@@ -15,13 +15,15 @@ const PAGE_SIZE = 50;
 const KIND_FILTERS = [
   { value: 'all', label: 'Everything' },
   { value: 'movie', label: 'Movies' },
+  { value: '4k', label: '4K Movies' },
   { value: 'show', label: 'TV shows' },
 ];
 
 function queryPage(query, cursor, kind = 'all') {
   const filter = query ? { search_title: { $regex: escapeRegex(query) } } : {};
   if (kind === 'show') filter.kind = 'show';
-  else if (kind === 'movie') filter.kind = { $ne: 'show' };
+  else if (kind === '4k') filter.kind = '4k';
+  else if (kind === 'movie') filter.kind = 'movie';
   return base44.entities.PlexMovie.filter(filter, {
     sort: 'title',
     limit: PAGE_SIZE,

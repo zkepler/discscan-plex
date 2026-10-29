@@ -129,6 +129,17 @@ async function plexJson(baseUrl: string, token: string, path: string) {
   return res.json();
 }
 
+const FOUR_K = /^(4k|uhd|2160p?)$/i;
+
+function kindFor(baseKind: string, resolution: string | null): string {
+  if (baseKind !== 'movie') return baseKind;
+  return FOUR_K.test(String(resolution || '')) ? '4k' : 'movie';
+}
+
+function is4kTitle(title: string): boolean {
+  return /(^|\W)(4k|uhd|2160p?)(\W|$)/i.test(String(title || ''));
+}
+
 export async function fetchPlexMovies(baseUrl: string, token: string) {
   const sectionsData = await plexJson(baseUrl, token, '/library/sections');
   const dirs = sectionsData?.MediaContainer?.Directory || [];
@@ -137,7 +148,7 @@ export async function fetchPlexMovies(baseUrl: string, token: string) {
     .map((dir: any) => ({
       key: String(dir.key),
       title: dir.title || (dir.type === 'show' ? 'TV Shows' : 'Movies'),
-      kind: dir.type === 'show' ? 'show' : 'movie',
+      kind: dir.type === 'show' ? 'show' : is4kTitle(dir.title) ? '4k' : 'movie',
     }));
 
   const byKey = new Map<string, any>();
@@ -146,14 +157,15 @@ export async function fetchPlexMovies(baseUrl: string, token: string) {
     const items = data?.MediaContainer?.Metadata || [];
     items.forEach((item: any) => {
       if (!item?.ratingKey) return;
+      const resolution = item.Media?.[0]?.videoResolution || null;
       byKey.set(String(item.ratingKey), {
         rating_key: String(item.ratingKey),
         title: item.title || 'Untitled',
-        kind: section.kind,
+        kind: kindFor(section.kind, resolution),
         year: item.year ? Number(item.year) : null,
         thumb: item.thumb || null,
         library: section.title,
-        resolution: item.Media?.[0]?.videoResolution || null,
+        resolution,
         duration_ms: item.duration ? Number(item.duration) : null,
         added_at: item.addedAt ? Number(item.addedAt) : null,
       });

@@ -19,7 +19,13 @@ export default function PlexMovieRow({ movie, config, owned }) {
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
           {[
             movie.year || null,
-            movie.kind === 'show' ? 'TV show' : movie.resolution ? movie.resolution.toUpperCase() : null,
+            movie.kind === 'show'
+              ? 'TV show'
+              : movie.kind === '4k'
+                ? '4K'
+                : movie.resolution
+                  ? movie.resolution.toUpperCase()
+                  : null,
             movie.library,
           ]
             .filter(Boolean)

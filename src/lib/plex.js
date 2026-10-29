@@ -22,6 +22,17 @@ async function getJson(url) {
   return res.json();
 }
 
+const FOUR_K = /^(4k|uhd|2160p?)$/i;
+
+export function kindFor(baseKind, resolution) {
+  if (baseKind !== 'movie') return baseKind;
+  return FOUR_K.test(String(resolution || '')) ? '4k' : 'movie';
+}
+
+function is4kTitle(title) {
+  return /(^|\W)(4k|uhd|2160p?)(\W|$)/i.test(String(title || ''));
+}
+
 export async function listMovieSections(config) {
   const data = await getJson(plexUrl(config.plex_url, config.plex_token, '/library/sections'));
   const dirs = data?.MediaContainer?.Directory || [];
@@ -30,7 +41,7 @@ export async function listMovieSections(config) {
     .map((d) => ({
       key: String(d.key),
       title: d.title,
-      kind: d.type === 'show' ? 'show' : 'movie',
+      kind: d.type === 'show' ? 'show' : is4kTitle(d.title) ? '4k' : 'movie',
     }));
 }
 
@@ -50,7 +61,7 @@ export async function fetchLibraryMoviesInBrowser(config, onProgress) {
       byKey.set(String(item.ratingKey), {
         rating_key: String(item.ratingKey),
         title: item.title || 'Untitled',
-        kind: section.kind,
+        kind: kindFor(section.kind, item.Media?.[0]?.videoResolution),
         year: item.year ? Number(item.year) : null,
         thumb: item.thumb || null,
         library: section.title,
