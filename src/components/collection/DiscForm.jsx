@@ -5,14 +5,13 @@ import { Textarea } from '@/components/ui/textarea';
 import DiscPlexMatch from '@/components/collection/DiscPlexMatch';
 import DiscExternalLinks from '@/components/collection/DiscExternalLinks';
 import FormatPicker from '@/components/collection/FormatPicker';
+import PosterLightbox from '@/components/collection/PosterLightbox';
 
 export default function DiscForm({ disc, form, set, confirming, onSave, onRemove, onClose }) {
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <div className="h-32 w-[86px] shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-          {disc.cover_url ? <img src={disc.cover_url} alt="" className="h-full w-full object-cover" /> : null}
-        </div>
+        <PosterLightbox src={disc.cover_url} title={form.title} />
 
         <div className="flex-1 space-y-3">
           <div className="space-y-1.5">
