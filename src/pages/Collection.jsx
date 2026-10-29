@@ -4,11 +4,12 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScanLine, Search } from 'lucide-react';
+import { ScanLine, Search, Share2 } from 'lucide-react';
 import StatsRow from '@/components/collection/StatsRow';
 import DiscCard from '@/components/collection/DiscCard';
 import DiscDialog from '@/components/collection/DiscDialog';
 import PlexPreview from '@/components/collection/PlexPreview';
+import ShareDialog from '@/components/collection/ShareDialog';
 import { loadConfig } from '@/lib/appSettings';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,7 @@ export default function Collection() {
   const [filter, setFilter] = useState('all');
   const [selected, setSelected] = useState(null);
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [sharing, setSharing] = useState(false);
 
   const refresh = async () => {
     const [discList, cfg] = await Promise.all([base44.entities.Disc.list(), loadConfig()]);
@@ -88,12 +90,18 @@ export default function Collection() {
           <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Everything you own</p>
           <h1 className="mt-2 font-display text-4xl leading-none text-foreground sm:text-5xl">The Collection</h1>
         </div>
-        <Button asChild>
-          <Link to="/scan">
-            <ScanLine className="mr-2 h-4 w-4" />
-            Scan a disc
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setSharing(true)} disabled={loading || discs.length === 0}>
+            <Share2 className="mr-2 h-4 w-4" />
+            Share
+          </Button>
+          <Button asChild>
+            <Link to="/scan">
+              <ScanLine className="mr-2 h-4 w-4" />
+              Scan a disc
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6">
@@ -186,6 +194,8 @@ export default function Collection() {
       {!loading ? <PlexPreview items={plexOnly} config={config} plexTotal={plexTotal} /> : null}
 
       <DiscDialog disc={selected} onClose={() => setSelected(null)} onChange={refresh} />
+
+      <ShareDialog open={sharing} onOpenChange={setSharing} discs={discs} inPlex={inPlex} />
     </div>
   );
 }
