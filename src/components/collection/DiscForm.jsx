@@ -1,10 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { FORMATS } from '@/lib/constants';
 import DiscPlexMatch from '@/components/collection/DiscPlexMatch';
+import FormatPicker from '@/components/collection/FormatPicker';
 
 export default function DiscForm({ disc, form, set, confirming, onSave, onRemove, onClose }) {
   return (
@@ -19,33 +18,24 @@ export default function DiscForm({ disc, form, set, confirming, onSave, onRemove
             <Label htmlFor="title">Title</Label>
             <Input id="title" value={form.title} onChange={(e) => set('title', e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="year">Year</Label>
-              <Input
-                id="year"
-                inputMode="numeric"
-                value={form.year}
-                onChange={(e) => set('year', e.target.value.replace(/\D/g, '').slice(0, 4))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Format</Label>
-              <Select value={form.format} onValueChange={(value) => set('format', value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FORMATS.map((format) => (
-                    <SelectItem key={format} value={format}>
-                      {format}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="year">Year</Label>
+            <Input
+              id="year"
+              inputMode="numeric"
+              value={form.year}
+              onChange={(e) => set('year', e.target.value.replace(/\D/g, '').slice(0, 4))}
+            />
           </div>
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Formats</Label>
+        <FormatPicker value={form.formats} onChange={(formats) => set('formats', formats)} />
+        <p className="text-xs text-muted-foreground">
+          This copy keeps the first format — any others are added as extra copies.
+        </p>
       </div>
 
       <div className="space-y-3">

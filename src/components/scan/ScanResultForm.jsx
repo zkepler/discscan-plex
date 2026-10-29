@@ -3,12 +3,13 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { findPlexMatch } from '@/lib/matching';
 import { emitDisc } from '@/lib/discEvents';
 import { pullPostersForDiscs } from '@/lib/plexPosters';
 import { FORMATS } from '@/lib/constants';
+import { addFormatCopies } from '@/lib/discCopies';
+import FormatPicker from '@/components/collection/FormatPicker';
 import { Check } from 'lucide-react';
 
 export default function ScanResultForm({ capture, onDone, onCancel }) {
@@ -16,7 +17,7 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
   const [form, setForm] = useState({
     title: capture.title || '',
     year: capture.year ? String(capture.year) : '',
-    format: FORMATS.includes(capture.format) ? capture.format : 'DVD',
+    formats: [FORMATS.includes(capture.format) ? capture.format : 'DVD'],
     location: '',
   });
 
@@ -26,12 +27,14 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
     const title = form.title.trim();
     if (!title) return;
 
+    const formats = form.formats.length ? form.formats : ['DVD'];
+
     const draft = {
       id: `draft-${Date.now()}`,
       title,
       upc: capture.upc,
       year: form.year ? Number(form.year) : null,
-      format: form.format,
+      format: formats[0],
       location: form.location.trim(),
       cover_url: capture.image || '',
       plex_rating_key: null,
@@ -56,7 +59,21 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
           plex_title: match?.title || null,
         });
         emitDisc({ type: 'replace', id: draft.id, disc: created });
-        if (match && !draft.cover_url) pullPostersForDiscs([created.id]).catch(() => {});
+
+        const extra = formats.length > 1
+          ? await addFormatCopies(
+              {
+                ...draft,
+                plex_rating_key: match?.rating_key || null,
+                plex_title: match?.title || null,
+              },
+              formats.slice(1)
+            )
+          : [];
+
+        if (match && !draft.cover_url) {
+          pullPostersForDiscs([created.id, ...extra.map((disc) => disc.id)]).catch(() => {});
+        }
       } catch (error) {
         emitDisc({ type: 'remove', id: draft.id });
         toast({ variant: 'destructive', title: 'Could not save that disc', description: error.message });
@@ -90,32 +107,21 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="scan-year">Year</Label>
-              <Input
-                id="scan-year"
-                inputMode="numeric"
-                value={form.year}
-                placeholder="1999"
-                onChange={(e) => set('year', e.target.value.replace(/\D/g, '').slice(0, 4))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Format</Label>
-              <Select value={form.format} onValueChange={(value) => set('format', value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FORMATS.map((format) => (
-                    <SelectItem key={format} value={format}>
-                      {format}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="scan-year">Year</Label>
+            <Input
+              id="scan-year"
+              inputMode="numeric"
+              value={form.year}
+              placeholder="1999"
+              onChange={(e) => set('year', e.target.value.replace(/\D/g, '').slice(0, 4))}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Formats</Label>
+            <FormatPicker value={form.formats} onChange={(formats) => set('formats', formats)} />
+            <p className="text-xs text-muted-foreground">Own it on more than one format? Tick them all.</p>
           </div>
 
           <div className="space-y-1.5">

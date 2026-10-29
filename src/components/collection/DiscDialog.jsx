@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { emitDisc } from '@/lib/discEvents';
 import { pullPostersForDiscs } from '@/lib/plexPosters';
+import { addFormatCopies } from '@/lib/discCopies';
 import DiscForm from '@/components/collection/DiscForm';
 
 export default function DiscDialog({ disc, onClose, onChange }) {
@@ -22,7 +23,7 @@ export default function DiscDialog({ disc, onClose, onChange }) {
     setForm({
       title: disc.title || '',
       year: disc.year ? String(disc.year) : '',
-      format: disc.format || 'DVD',
+      formats: [disc.format || 'DVD'],
       location: disc.location || '',
       notes: disc.notes || '',
       plex_rating_key: disc.plex_rating_key || '',
@@ -40,10 +41,11 @@ export default function DiscDialog({ disc, onClose, onChange }) {
     toast({ variant: 'destructive', title: 'That change did not stick', description: error.message });
 
   function save() {
+    const formats = form.formats.length ? form.formats : ['DVD'];
     const patch = {
       title: form.title.trim(),
       year: form.year ? Number(form.year) : null,
-      format: form.format,
+      format: formats[0],
       location: form.location.trim(),
       notes: form.notes.trim(),
       plex_rating_key: form.plex_rating_key || null,
@@ -55,9 +57,15 @@ export default function DiscDialog({ disc, onClose, onChange }) {
 
     base44.entities.Disc.update(shown.id, patch)
       .then(() => {
+        if (formats.length > 1) {
+          return addFormatCopies({ ...patch, cover_url: shown.cover_url }, formats.slice(1));
+        }
+        return [];
+      })
+      .then((extra) => {
         onChange?.();
         if (patch.plex_rating_key && !shown.cover_url) {
-          pullPostersForDiscs([shown.id]).catch(() => {});
+          pullPostersForDiscs([shown.id, ...(extra || []).map((disc) => disc.id)]).catch(() => {});
         }
       })
       .catch((error) => {

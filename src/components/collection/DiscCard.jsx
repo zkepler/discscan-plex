@@ -3,7 +3,7 @@ import { Check } from 'lucide-react';
 import { formatBannerStyle } from '@/lib/mediaStyles';
 import { watchState } from '@/lib/watchStatus';
 
-export default function DiscCard({ discs = [], watch = {}, onSelect }) {
+export default function DiscCard({ discs = [], watch = {}, onSelect, onAddFormat }) {
   const primary = discs.find((disc) => disc.cover_url) || discs[0];
   if (!primary) return null;
 
@@ -92,6 +92,14 @@ export default function DiscCard({ discs = [], watch = {}, onSelect }) {
             {format}
           </button>
         ))}
+
+        <button
+          type="button"
+          onClick={() => onAddFormat?.(discs)}
+          className="block w-full rounded-md border border-dashed border-border px-2 py-1 text-center text-xs uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          + Format
+        </button>
       </div>
     </div>
   );

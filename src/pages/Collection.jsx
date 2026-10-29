@@ -8,6 +8,7 @@ import { ScanLine, Search, Share2 } from 'lucide-react';
 import StatsRow from '@/components/collection/StatsRow';
 import DiscCard from '@/components/collection/DiscCard';
 import DiscDialog from '@/components/collection/DiscDialog';
+import AddFormatDialog from '@/components/collection/AddFormatDialog';
 import PlexPreview from '@/components/collection/PlexPreview';
 import ShareDialog from '@/components/collection/ShareDialog';
 import FixTitlesButton from '@/components/collection/FixTitlesButton';
@@ -41,6 +42,7 @@ export default function Collection() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sharing, setSharing] = useState(false);
+  const [addingFormats, setAddingFormats] = useState(null);
 
   useTabReselect('/', () => {
     setQuery('');
@@ -255,7 +257,13 @@ export default function Collection() {
         <>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {groups.slice(0, visible).map((group) => (
-              <DiscCard key={group.key} discs={group.discs} watch={watch} onSelect={openDisc} />
+              <DiscCard
+                key={group.key}
+                discs={group.discs}
+                watch={watch}
+                onSelect={openDisc}
+                onAddFormat={setAddingFormats}
+              />
             ))}
           </div>
           {groups.length > visible ? (
@@ -271,6 +279,14 @@ export default function Collection() {
       {!loading ? <PlexPreview items={plexOnly} config={config} plexTotal={plexTotal} /> : null}
 
       <DiscDialog disc={selected} onClose={closeDisc} onChange={refresh} />
+
+      {addingFormats ? (
+        <AddFormatDialog
+          discs={addingFormats}
+          onClose={() => setAddingFormats(null)}
+          onDone={refresh}
+        />
+      ) : null}
 
       <ShareDialog open={sharing} onOpenChange={setSharing} discs={discs} inPlex={inPlex} />
     </div>
