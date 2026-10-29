@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { FORMATS } from '@/lib/constants';
+import DiscPlexMatch from '@/components/collection/DiscPlexMatch';
 
 export default function DiscDialog({ disc, onClose, onChange }) {
   const [form, setForm] = useState(null);
@@ -24,6 +25,8 @@ export default function DiscDialog({ disc, onClose, onChange }) {
       format: disc.format || 'DVD',
       location: disc.location || '',
       notes: disc.notes || '',
+      plex_rating_key: disc.plex_rating_key || '',
+      plex_title: disc.plex_title || '',
     });
     setConfirming(false);
   }, [disc]);
@@ -40,6 +43,8 @@ export default function DiscDialog({ disc, onClose, onChange }) {
       format: form.format,
       location: form.location.trim(),
       notes: form.notes.trim(),
+      plex_rating_key: form.plex_rating_key || null,
+      plex_title: form.plex_rating_key ? form.plex_title || null : null,
     });
     setSaving(false);
     await onChange();
@@ -114,10 +119,16 @@ export default function DiscDialog({ disc, onClose, onChange }) {
             <Label htmlFor="notes">Notes</Label>
             <Textarea id="notes" rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} />
           </div>
-          <p className="text-xs text-muted-foreground">
-            {disc.upc ? `Barcode ${disc.upc} · ` : ''}
-            {disc.plex_rating_key ? `Found in Plex as “${disc.plex_title}”` : 'Not in Plex yet'}
-          </p>
+          <DiscPlexMatch
+            discTitle={form.title}
+            ratingKey={form.plex_rating_key}
+            plexTitle={form.plex_title}
+            onLink={(match) =>
+              setForm((prev) => ({ ...prev, plex_rating_key: match.rating_key, plex_title: match.title }))
+            }
+            onUnlink={() => setForm((prev) => ({ ...prev, plex_rating_key: '', plex_title: '' }))}
+          />
+          {disc.upc ? <p className="text-xs text-muted-foreground">Barcode {disc.upc}</p> : null}
         </div>
 
         <div className="flex items-center justify-between pt-1">
