@@ -1,5 +1,6 @@
 import PlexConnectCard from '@/components/settings/PlexConnectCard';
 import AccountCard from '@/components/settings/AccountCard';
+import AppearanceCard from '@/components/settings/AppearanceCard';
 
 export default function SettingsPage() {
   return (
@@ -18,6 +19,8 @@ export default function SettingsPage() {
         Plex Remote Access, so syncing works from anywhere — just turn Remote Access on in Plex → Settings, then run
         a sync whenever you add titles.
       </p>
+
+      <AppearanceCard />
 
       <AccountCard />
     </div>
