@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
-import { listPlexServers, resolveReachable } from '../../shared/plexServer.ts';
+import { listPlexServers, resolveReachable, safeFetch } from '../../shared/plexServer.ts';
 
 const MAX = 24;
 const BATCH = 6;
@@ -75,7 +75,7 @@ export default async function (req: Request): Promise<Response> {
       const settled = await Promise.allSettled(
         batch.map(async (disc: any) => {
           const thumb = thumbByKey.get(String(disc.plex_rating_key)) as string;
-          const res = await fetch(
+          const res = await safeFetch(
             `${baseUrl}${photoPath(thumb)}&X-Plex-Token=${encodeURIComponent(token)}`,
             { headers: { Accept: 'image/*' }, signal: AbortSignal.timeout(20000) }
           );

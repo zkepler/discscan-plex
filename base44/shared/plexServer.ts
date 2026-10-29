@@ -29,6 +29,162 @@ export function normalizeBaseUrl(url: string): string {
   return withScheme.replace(/\/+$/, '');
 }
 
+const BLOCKED_HOSTNAMES = new Set([
+  'localhost',
+  'metadata',
+  'metadata.google.internal',
+  'instance-data',
+]);
+
+const BLOCKED_HOST_SUFFIXES = [
+  '.localhost',
+  '.local',
+  '.internal',
+  '.home.arpa',
+  '.lan',
+  '.intranet',
+  '.localdomain',
+];
+
+// Ranges that must never be reachable from a backend request: loopback, LAN,
+// link-local (cloud metadata), CGNAT, multicast and reserved space.
+const BLOCKED_V4: [number, number][] = [
+  [0x00000000, 0x00ffffff],
+  [0x0a000000, 0x0affffff],
+  [0x64400000, 0x647fffff],
+  [0x7f000000, 0x7fffffff],
+  [0xa9fe0000, 0xa9feffff],
+  [0xac100000, 0xac1fffff],
+  [0xc0000000, 0xc00000ff],
+  [0xc0a80000, 0xc0a8ffff],
+  [0xc6120000, 0xc613ffff],
+  [0xe0000000, 0xefffffff],
+  [0xf0000000, 0xffffffff],
+];
+
+function ipv4ToInt(host: string): number | null {
+  const parts = host.split('.');
+  if (parts.length !== 4) return null;
+  let value = 0;
+  for (const part of parts) {
+    if (!/^\d{1,3}$/.test(part)) return null;
+    const octet = Number(part);
+    if (octet > 255) return null;
+    value = value * 256 + octet;
+  }
+  return value;
+}
+
+function isPublicIpv4(host: string): boolean {
+  const value = ipv4ToInt(host);
+  if (value === null) return false;
+  return !BLOCKED_V4.some(([low, high]) => value >= low && value <= high);
+}
+
+function isPublicIpv6(host: string): boolean {
+  const ip = host.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!ip.includes(':')) return true;
+  if (/^[0:]+$/.test(ip)) return false; // :: and fully expanded zero addresses
+  if (/^[0:]+1$/.test(ip)) return false; // ::1 in any form
+  const mappedV4 = ip.match(/(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (mappedV4) return isPublicIpv4(mappedV4[1]);
+  if (/^f[cd]/.test(ip)) return false; // unique local
+  if (/^fe[89ab]/.test(ip)) return false; // link local
+  if (/^ff/.test(ip)) return false; // multicast
+  return true;
+}
+
+function isBlockedHost(hostname: string): boolean {
+  const host = String(hostname || '')
+    .toLowerCase()
+    .replace(/\.$/, '')
+    .replace(/^\[|\]$/g, '');
+  if (!host) return true;
+  if (BLOCKED_HOSTNAMES.has(host)) return true;
+  if (BLOCKED_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix))) return true;
+  if (/^\d+$/.test(host)) return true; // bare integer is an alternative loopback notation
+  if (ipv4ToInt(host) !== null) return !isPublicIpv4(host);
+  if (host.includes(':')) return !isPublicIpv6(host);
+  if (!host.includes('.')) return true; // single-label names only resolve internally
+  return false;
+}
+
+async function resolvesToPublicHost(hostname: string): Promise<boolean> {
+  const host = String(hostname || '')
+    .toLowerCase()
+    .replace(/\.$/, '')
+    .replace(/^\[|\]$/g, '');
+  // IP literals were already classified above; only real names need a lookup.
+  if (ipv4ToInt(host) !== null || host.includes(':')) return true;
+
+  const resolveDns = (globalThis as any).Deno?.resolveDns;
+  if (typeof resolveDns !== 'function') return true;
+
+  const addresses: string[] = [];
+  for (const type of ['A', 'AAAA']) {
+    try {
+      const found = await resolveDns.call((globalThis as any).Deno, host, type);
+      if (Array.isArray(found)) addresses.push(...found.map((entry: any) => String(entry)));
+    } catch (error: any) {
+      const name = String(error?.name || '');
+      if (name === 'NotFound' || String(error?.code || '') === 'NotFound') continue;
+      if (/perm|notcapable/i.test(name)) return true; // resolver unavailable: host checks still apply
+      return false;
+    }
+  }
+  // Nothing resolvable means the request itself could not connect; the literal-host
+  // checks above already covered the direct-IP forms.
+  if (!addresses.length) return true;
+  return addresses.every((address) =>
+    address.includes(':') ? isPublicIpv6(address) : isPublicIpv4(address)
+  );
+}
+
+// Every outbound Plex request goes through this: only public http(s) hosts.
+export async function assertFetchableUrl(rawUrl: string): Promise<URL> {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw plexError('That Plex address is not a valid URL.', 400);
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw plexError('Only http and https Plex addresses are supported.', 400);
+  }
+  if (parsed.username || parsed.password) {
+    throw plexError('That Plex address is not allowed.', 400);
+  }
+  if (isBlockedHost(parsed.hostname) || !(await resolvesToPublicHost(parsed.hostname))) {
+    throw plexError(
+      'That Plex address points to a private or internal network, which is not supported.',
+      400
+    );
+  }
+  return parsed;
+}
+
+// Redirects are followed by hand so each hop is validated, never straight to an internal host.
+export async function safeFetch(
+  url: string,
+  init: RequestInit = {},
+  hops = 0
+): Promise<Response> {
+  await assertFetchableUrl(url);
+  const res = await fetch(url, { ...init, redirect: 'manual' });
+  if (res.status >= 300 && res.status < 400 && hops < 2) {
+    const location = res.headers.get('location');
+    if (!location) return res;
+    const next = new URL(location, url).toString();
+    try {
+      await res.body?.cancel();
+    } catch {
+      // body already consumed/closed
+    }
+    return safeFetch(next, init, hops + 1);
+  }
+  return res;
+}
+
 function protocolOf(connection: any): string {
   return (
     String(connection?.protocol || '').toLowerCase() ||
@@ -96,7 +252,7 @@ export function candidateUrls(servers: PlexServer[], requested?: string): string
 
 async function reachable(baseUrl: string, token: string): Promise<boolean> {
   try {
-    const res = await fetch(`${baseUrl}/identity?X-Plex-Token=${encodeURIComponent(token)}`, {
+    const res = await safeFetch(`${baseUrl}/identity?X-Plex-Token=${encodeURIComponent(token)}`, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(8000),
     });
@@ -119,7 +275,7 @@ export async function resolveReachable(servers: PlexServer[], token: string, req
 
 async function plexJson(baseUrl: string, token: string, path: string) {
   const sep = path.includes('?') ? '&' : '?';
-  const res = await fetch(
+  const res = await safeFetch(
     `${normalizeBaseUrl(baseUrl)}${path}${sep}X-Plex-Token=${encodeURIComponent(token)}`,
     { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(25000) }
   );
@@ -165,6 +321,8 @@ export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: st
   const dirs = sectionsData?.MediaContainer?.Directory || [];
   const allSections = dirs
     .filter((dir: any) => dir.type === 'movie' || dir.type === 'show')
+    // The key is interpolated into the next request path, so only plain integers pass.
+    .filter((dir: any) => /^\d+$/.test(String(dir.key ?? '')))
     .map((dir: any) => ({
       key: String(dir.key),
       title: dir.title || (dir.type === 'show' ? 'TV Shows' : 'Movies'),
