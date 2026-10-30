@@ -50,7 +50,7 @@ export default function ShareDialog({ open, onOpenChange, discs }) {
           </pre>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 sm:justify-start">
           <Button variant="outline" onClick={copyText}>
             <Copy className="mr-2 h-4 w-4" />
             Copy text
