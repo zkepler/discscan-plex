@@ -4,7 +4,15 @@ import { seasonNumber, showName } from '@/lib/groupDiscs';
 import { formatBannerStyle, seasonListLabel, seasonsLabel } from '@/lib/mediaStyles';
 import { watchState } from '@/lib/watchStatus';
 
-export default function DiscCard({ discs = [], watch = {}, seasons = {}, onSelect, onAddFormat, onEditMeta }) {
+export default function DiscCard({
+  discs = [],
+  watch = {},
+  seasons = {},
+  onSelect,
+  onOpenShow,
+  onAddFormat,
+  onEditMeta,
+}) {
   const primary = discs.find((disc) => disc.cover_url) || discs[0];
   if (!primary) return null;
 
@@ -21,6 +29,12 @@ export default function DiscCard({ discs = [], watch = {}, seasons = {}, onSelec
   ].sort((a, b) => a - b);
   const heading = seasonDisc ? showName(seasonDisc.title) : primary.title;
   const year = seasonDisc?.year || primary.year;
+
+  // A show opens its season list; a movie opens its own copy.
+  const openCard = () =>
+    seasonDisc || seasonCount
+      ? onOpenShow?.({ title: heading, discs, seasonCount })
+      : onSelect(primary);
 
   // One bold tag per format this movie is owned in.
   const formatEntries = [];
@@ -51,8 +65,8 @@ export default function DiscCard({ discs = [], watch = {}, seasons = {}, onSelec
 
         <button
           type="button"
-          onClick={() => onSelect(primary)}
-          aria-label={`Open ${primary.title}`}
+          onClick={openCard}
+          aria-label={`Open ${heading}`}
           className="absolute inset-0 z-0"
         />
 
@@ -72,11 +86,7 @@ export default function DiscCard({ discs = [], watch = {}, seasons = {}, onSelec
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2.5 pt-12">
-          <button
-            type="button"
-            onClick={() => onSelect(primary)}
-            className="pointer-events-auto block w-full text-left"
-          >
+          <button type="button" onClick={openCard} className="pointer-events-auto block w-full text-left">
             <p className="line-clamp-2 text-sm font-medium leading-tight text-white">{heading}</p>
             <p className="mt-1 text-xs text-white/60">
               {[

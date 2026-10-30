@@ -8,6 +8,7 @@ import { Download, ScanLine, Search } from 'lucide-react';
 import StatsRow from '@/components/collection/StatsRow';
 import DiscCard from '@/components/collection/DiscCard';
 import DiscDialog from '@/components/collection/DiscDialog';
+import ShowSeasonsDialog from '@/components/collection/ShowSeasonsDialog';
 import AddFormatDialog from '@/components/collection/AddFormatDialog';
 import PlexPreview from '@/components/collection/PlexPreview';
 import ShareDialog from '@/components/collection/ShareDialog';
@@ -48,6 +49,7 @@ export default function Collection() {
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sharing, setSharing] = useState(false);
   const [addingFormats, setAddingFormats] = useState(null);
+  const [showDetails, setShowDetails] = useState(null);
 
   useTabReselect('/', () => {
     setQuery('');
@@ -298,6 +300,7 @@ export default function Collection() {
                 watch={watch}
                 seasons={seasons}
                 onSelect={openDisc}
+                onOpenShow={setShowDetails}
                 onAddFormat={setAddingFormats}
                 onEditMeta={(disc) => openDisc(disc, true)}
               />
@@ -314,6 +317,15 @@ export default function Collection() {
       )}
 
       {!loading ? <PlexPreview items={plexOnly} config={config} plexTotal={plexTotal} /> : null}
+
+      <ShowSeasonsDialog
+        show={showDetails}
+        onClose={() => setShowDetails(null)}
+        onSelect={(disc) => {
+          setShowDetails(null);
+          openDisc(disc);
+        }}
+      />
 
       <DiscDialog
         disc={selected}
