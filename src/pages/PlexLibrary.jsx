@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import PlexMovieRow from '@/components/plex/PlexMovieRow';
+import PlexTitleDialog from '@/components/plex/PlexTitleDialog';
 import { loadConfig } from '@/lib/appSettings';
 import { syncPlexLibrary } from '@/lib/plexSync';
 import { escapeRegex } from '@/lib/matching';
@@ -56,6 +57,7 @@ export default function PlexLibrary() {
   const [debounced, setDebounced] = useState(
     () => (new URLSearchParams(window.location.search).get('q') || '').trim().toLowerCase()
   );
+  const [selected, setSelected] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncingScope, setSyncingScope] = useState('all');
@@ -266,6 +268,7 @@ export default function PlexLibrary() {
               movie={movie}
               config={config}
               owned={ownedKeys.has(movie.rating_key)}
+              onSelect={setSelected}
             />
           ))
         )}
@@ -278,6 +281,8 @@ export default function PlexLibrary() {
           </Button>
         </div>
       ) : null}
+
+      <PlexTitleDialog movie={selected} config={config} onClose={() => setSelected(null)} />
     </div>
   );
 }

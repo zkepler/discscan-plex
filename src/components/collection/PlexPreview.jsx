@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { posterUrl } from '@/lib/plex';
+import PlexTitleDialog from '@/components/plex/PlexTitleDialog';
 
 export default function PlexPreview({ items, config, plexTotal }) {
+  const [selected, setSelected] = useState(null);
+
   if (!config?.plex_url) return null;
 
   return (
@@ -23,7 +27,12 @@ export default function PlexPreview({ items, config, plexTotal }) {
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {items.map((movie) => (
-          <div key={movie.rating_key} className="overflow-hidden rounded-lg border border-border bg-card">
+          <button
+            key={movie.rating_key}
+            type="button"
+            onClick={() => setSelected(movie)}
+            className="group select-none overflow-hidden rounded-lg border border-border bg-card text-left transition-colors hover:border-primary/50"
+          >
             <div className="aspect-[2/3] bg-muted">
               {movie.thumb ? (
                 <img
@@ -35,10 +44,12 @@ export default function PlexPreview({ items, config, plexTotal }) {
               ) : null}
             </div>
             <div className="p-2">
-              <p className="truncate text-xs font-medium text-foreground">{movie.title}</p>
+              <p className="truncate text-xs font-medium text-foreground group-hover:text-primary">
+                {movie.title}
+              </p>
               <p className="text-xs text-muted-foreground">{movie.year || '—'}</p>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -47,6 +58,8 @@ export default function PlexPreview({ items, config, plexTotal }) {
           Everything in Plex is also on your shelf. Nice work.
         </p>
       ) : null}
+
+      <PlexTitleDialog movie={selected} config={config} onClose={() => setSelected(null)} />
     </section>
   );
 }
