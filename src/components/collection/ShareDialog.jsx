@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Copy, Mail } from 'lucide-react';
+import { Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { buildRecentPlexEmail, buildShareEmail, mailtoLink } from '@/lib/shareText';
+import { buildCollectionCsv, buildRecentCsv, downloadCsv } from '@/lib/csvExport';
 import { cn } from '@/lib/utils';
 
 const MODES = [
@@ -23,12 +19,9 @@ const MODES = [
   { id: 'recent', label: 'Recently added' },
 ];
 
-export default function ShareDialog({ open, onOpenChange, discs, inPlex }) {
+export default function ShareDialog({ open, onOpenChange, discs }) {
   const { toast } = useToast();
   const [mode, setMode] = useState('collection');
-  const [to, setTo] = useState('');
-  const [note, setNote] = useState('');
-  const [includeList, setIncludeList] = useState(true);
   const [recent, setRecent] = useState(null);
 
   useEffect(() => {
@@ -39,7 +32,7 @@ export default function ShareDialog({ open, onOpenChange, discs, inPlex }) {
     if (!open || mode !== 'recent' || recent) return;
     let active = true;
     (async () => {
-      const page = await base44.entities.PlexMovie.filter({}, { sort: '-added_at', limit: 20 });
+      const page = await base44.entities.PlexMovie.filter({}, { sort: '-added_at', limit: 500 });
       if (active) setRecent(page.items || []);
     })();
     return () => {
@@ -49,24 +42,30 @@ export default function ShareDialog({ open, onOpenChange, discs, inPlex }) {
 
   const loading = mode === 'recent' && !recent;
 
-  const email = useMemo(
-    () =>
-      mode === 'recent'
-        ? buildRecentPlexEmail({ items: recent || [], note })
-        : buildShareEmail({ discs, inPlex, includeList, note }),
-    [mode, recent, note, discs, inPlex, includeList]
+  const csv = useMemo(
+    () => (mode === 'recent' ? buildRecentCsv({ items: recent || [] }) : buildCollectionCsv({ discs })),
+    [mode, recent, discs]
   );
+
+  const fileName = `${mode === 'recent' ? 'recently-added' : 'disc-collection'}-${
+    new Date().toISOString().slice(0, 10)
+  }.csv`;
 
   const copyText = async () => {
     try {
-      await navigator.clipboard.writeText(email.body);
+      await navigator.clipboard.writeText(csv);
       toast({
         title: mode === 'recent' ? 'Recent additions copied' : 'Collection copied',
-        description: 'Paste it into any email or message.',
+        description: 'Paste it into any spreadsheet.',
       });
     } catch (error) {
       toast({ title: 'Could not copy', description: 'Select the preview text and copy it manually.', variant: 'destructive' });
     }
+  };
+
+  const save = () => {
+    downloadCsv(fileName, csv);
+    toast({ title: 'CSV downloaded', description: fileName });
   };
 
   return (
@@ -77,7 +76,7 @@ export default function ShareDialog({ open, onOpenChange, discs, inPlex }) {
             {mode === 'recent' ? 'Share what is new in Plex' : 'Share the collection'}
           </DialogTitle>
           <DialogDescription>
-            Add a note, check the preview, then send it from your own email app.
+            Download a CSV of your shelf and open it in any spreadsheet.
           </DialogDescription>
         </DialogHeader>
 
@@ -101,43 +100,7 @@ export default function ShareDialog({ open, onOpenChange, discs, inPlex }) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="share-to">Send to</Label>
-            <Input
-              id="share-to"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-              placeholder="friend@example.com"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="share-note">Note</Label>
-            <Textarea
-              id="share-note"
-              rows={2}
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder={
-                mode === 'recent' ? 'Look what just landed on the server.' : "Here's what's on my shelf these days."
-              }
-            />
-          </div>
-
-          {mode === 'collection' ? (
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
-              <div>
-                <p className="text-sm text-foreground">Include every title</p>
-                <p className="text-xs text-muted-foreground">Turn off to send just the totals.</p>
-              </div>
-              <Switch checked={includeList} onCheckedChange={setIncludeList} />
-            </div>
-          ) : null}
-
-          <div className="space-y-1.5">
-            <Label>Preview</Label>
+            <p className="text-sm font-medium text-foreground">{fileName}</p>
             {loading ? (
               <p className="rounded-lg border border-border bg-secondary/40 p-3 text-xs text-muted-foreground">
                 Reading your Plex library…
@@ -147,8 +110,8 @@ export default function ShareDialog({ open, onOpenChange, discs, inPlex }) {
                 Nothing has been added to Plex yet — run a sync on the Plex page first.
               </p>
             ) : (
-              <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
-                {email.body}
+              <pre className="max-h-52 overflow-auto whitespace-pre rounded-lg border border-border bg-secondary/40 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
+                {csv}
               </pre>
             )}
           </div>
@@ -159,18 +122,9 @@ export default function ShareDialog({ open, onOpenChange, discs, inPlex }) {
             <Copy className="mr-2 h-4 w-4" />
             Copy text
           </Button>
-          <Button asChild>
-            <a
-              href={loading ? undefined : mailtoLink({ to, subject: email.subject, body: email.body })}
-              aria-disabled={loading}
-              onClick={(event) => {
-                if (loading) event.preventDefault();
-              }}
-              className={loading ? 'pointer-events-none opacity-50' : undefined}
-            >
-              <Mail className="mr-2 h-4 w-4" />
-              Open email app
-            </a>
+          <Button onClick={save} disabled={loading}>
+            <Download className="mr-2 h-4 w-4" />
+            Download CSV
           </Button>
         </DialogFooter>
       </DialogContent>

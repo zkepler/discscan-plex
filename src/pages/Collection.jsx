@@ -306,7 +306,7 @@ export default function Collection() {
         />
       ) : null}
 
-      <ShareDialog open={sharing} onOpenChange={setSharing} discs={discs} inPlex={inPlex} />
+      <ShareDialog open={sharing} onOpenChange={setSharing} discs={discs} />
     </div>
   );
 }
