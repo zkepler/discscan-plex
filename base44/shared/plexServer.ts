@@ -499,6 +499,7 @@ export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: st
         duration_ms: item.duration ? Number(item.duration) : null,
         added_at: item.addedAt ? Number(item.addedAt) : null,
         progress_pct: progressFor(kind, item),
+        season_count: kind === 'show' ? Number(item.childCount || 0) || null : null,
         last_viewed_at: item.lastViewedAt ? Number(item.lastViewedAt) * 1000 : null,
         view_count: Number(item.viewCount || 0),
       });

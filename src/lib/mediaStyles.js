@@ -30,3 +30,10 @@ export const formatBannerStyle = (format) =>
   FORMAT_BANNER_STYLES[format] || FORMAT_BANNER_STYLES.Other;
 
 export const kindStyle = (kind) => KIND_STYLES[kind] || KIND_STYLES.movie;
+
+// "5 seasons" for a show, or null when Plex reported no seasons.
+export const seasonsLabel = (count) => {
+  const seasons = Number(count || 0);
+  if (!seasons) return null;
+  return `${seasons} season${seasons === 1 ? '' : 's'}`;
+};

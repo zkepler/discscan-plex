@@ -45,6 +45,10 @@
       "type": "number",
       "description": "How far through the title you are in Plex, 0-100"
     },
+    "season_count": {
+      "type": "number",
+      "description": "Number of seasons Plex holds for a TV show"
+    },
     "last_viewed_at": {
       "type": "number",
       "description": "Epoch milliseconds of the last time this was watched in Plex"

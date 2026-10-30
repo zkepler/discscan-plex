@@ -91,6 +91,7 @@ export async function fetchLibraryMoviesInBrowser(config, onProgress, kinds) {
           : (item.duration && item.viewOffset
               ? Math.min(100, Math.round((Number(item.viewOffset) / Number(item.duration)) * 100))
               : 0),
+        season_count: kind === 'show' ? Number(item.childCount || 0) || null : null,
         last_viewed_at: item.lastViewedAt ? Number(item.lastViewedAt) * 1000 : null,
         view_count: Number(item.viewCount || 0),
       });

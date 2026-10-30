@@ -1,5 +1,5 @@
 import { posterUrl } from '@/lib/plex';
-import { kindStyle } from '@/lib/mediaStyles';
+import { kindStyle, seasonsLabel } from '@/lib/mediaStyles';
 
 function addedLabel(seconds) {
   if (!seconds) return 'Added date unknown';
@@ -11,7 +11,13 @@ function addedLabel(seconds) {
 }
 
 export default function AddedRow({ movie, config, owned }) {
-  const meta = [addedLabel(movie.added_at), movie.library || null].filter(Boolean).join(' · ');
+  const meta = [
+    addedLabel(movie.added_at),
+    movie.kind === 'show' ? seasonsLabel(movie.season_count) : null,
+    movie.library || null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const kind = kindStyle(movie.kind);
 
   return (

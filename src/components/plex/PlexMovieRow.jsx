@@ -1,5 +1,5 @@
 import { posterUrl } from '@/lib/plex';
-import { kindStyle } from '@/lib/mediaStyles';
+import { kindStyle, seasonsLabel } from '@/lib/mediaStyles';
 import ThemeSongButton from '@/components/plex/ThemeSongButton';
 
 export default function PlexMovieRow({ movie, config, owned }) {
@@ -28,7 +28,12 @@ export default function PlexMovieRow({ movie, config, owned }) {
           </span>
         </div>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {[movie.year || null, movie.resolution ? movie.resolution.toUpperCase() : null, movie.library]
+          {[
+            movie.year || null,
+            movie.kind === 'show' ? seasonsLabel(movie.season_count) : null,
+            movie.resolution ? movie.resolution.toUpperCase() : null,
+            movie.library,
+          ]
             .filter(Boolean)
             .join(' · ')}
         </p>
