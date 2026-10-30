@@ -1,5 +1,6 @@
 import { posterUrl } from '@/lib/plex';
 import { kindStyle } from '@/lib/mediaStyles';
+import ThemeSongButton from '@/components/plex/ThemeSongButton';
 
 export default function PlexMovieRow({ movie, config, owned }) {
   return (
@@ -32,6 +33,8 @@ export default function PlexMovieRow({ movie, config, owned }) {
             .join(' · ')}
         </p>
       </div>
+
+      <ThemeSongButton config={config} ratingKey={movie.rating_key} title={movie.title} />
 
       {owned ? (
         <span className="shrink-0 rounded-full border border-primary/40 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
