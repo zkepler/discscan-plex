@@ -16,7 +16,7 @@ import { loadConfig } from '@/lib/appSettings';
 import { syncPlexLibrary } from '@/lib/plexSync';
 import { escapeRegex } from '@/lib/matching';
 import { listAllPlexMovies } from '@/lib/plexStore';
-import { buildPlexLibraryCsv, downloadCsv } from '@/lib/csvExport';
+import { downloadPlexLibraryWorkbook } from '@/lib/xlsxExport';
 import { useTabReselect } from '@/lib/tabReset';
 import PullIndicator from '@/components/PullIndicator';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -118,11 +118,11 @@ export default function PlexLibrary() {
     setExporting(true);
     try {
       const items = await listAllPlexMovies();
-      downloadCsv(
-        `plex-library-${new Date().toISOString().slice(0, 10)}.csv`,
-        buildPlexLibraryCsv({ items, ownedKeys })
-      );
-      toast({ title: 'Library exported', description: `${items.length} titles in the CSV` });
+      const sheets = downloadPlexLibraryWorkbook({ items, ownedKeys });
+      toast({
+        title: 'Library exported',
+        description: sheets.map((sheet) => `${sheet.name}: ${sheet.count}`).join(' · '),
+      });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Export failed', description: error.message });
     } finally {
@@ -198,7 +198,7 @@ export default function PlexLibrary() {
             ) : (
               <Download className="mr-2 h-4 w-4" />
             )}
-            {exporting ? 'Exporting…' : 'Export CSV'}
+            {exporting ? 'Exporting…' : 'Export to Excel'}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

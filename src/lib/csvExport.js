@@ -70,31 +70,6 @@ export function buildRecentCsv({ items = [] }) {
   );
 }
 
-const KIND_ORDER = ['movie', '4k', 'show'];
-
-export function buildPlexLibraryCsv({ items = [], ownedKeys = new Set() }) {
-  const sorted = [...items].sort((a, b) => {
-    const order = KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind);
-    return order || byTitle(a, b);
-  });
-
-  return toCsv(
-    ['Title', 'Year', 'Type', 'Library', 'Resolution', 'Runtime (min)', 'Added', 'Watched (%)', 'Views', 'On my shelf'],
-    sorted.map((item) => [
-      item.title || 'Untitled',
-      item.year || '',
-      KIND_LABELS[item.kind] || '',
-      item.library || '',
-      item.resolution || '',
-      item.duration_ms ? Math.round(item.duration_ms / 60000) : '',
-      item.added_at ? new Date(item.added_at * 1000).toISOString().slice(0, 10) : '',
-      item.progress_pct ? Math.round(item.progress_pct) : '',
-      item.view_count || '',
-      ownedKeys.has(item.rating_key) ? 'Yes' : 'No',
-    ])
-  );
-}
-
 export function downloadCsv(filename, csv) {
   // A byte-order mark keeps accented titles readable when opened in Excel.
   const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
