@@ -35,7 +35,7 @@ export default function ShareDialog({ open, onOpenChange, discs }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] min-h-[72vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[94vh] min-h-[84vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Share the collection</DialogTitle>
           <DialogDescription>
@@ -45,7 +45,7 @@ export default function ShareDialog({ open, onOpenChange, discs }) {
 
         <div className="space-y-1.5">
           <p className="text-sm font-medium text-foreground">{fileName}</p>
-          <pre className="max-h-[58vh] min-h-[40vh] overflow-auto whitespace-pre rounded-lg border border-border bg-secondary/40 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
+          <pre className="max-h-[64vh] min-h-[56vh] overflow-auto whitespace-pre rounded-lg border border-border bg-secondary/40 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
             {csv}
           </pre>
         </div>
