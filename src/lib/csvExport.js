@@ -4,7 +4,11 @@ const FORMAT_ORDER = ['4K UHD', 'Blu-ray', 'DVD', 'VHS', 'LaserDisc', 'Other'];
 const KIND_LABELS = { movie: 'Movie', '4k': '4K', show: 'TV show' };
 
 function cell(value) {
-  const text = value === null || value === undefined ? '' : String(value);
+  if (value === null || value === undefined) return '';
+  // Excel, Sheets and LibreOffice run a cell as a formula when it starts with =, +, -
+  // or @, so imported or catalog text is always made inert by a leading apostrophe.
+  const text =
+    typeof value === 'number' ? String(value) : String(value).replace(/^[=+\-@\t\r]/, (ch) => `'${ch}`);
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
