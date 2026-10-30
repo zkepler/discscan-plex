@@ -3,7 +3,14 @@ import { seasonNumber } from '@/lib/groupDiscs';
 import { formatStyle } from '@/lib/mediaStyles';
 
 // Every season the show has, with the ones on the shelf and the ones only Plex holds.
-export default function ShowSeasons({ title, seasonCount = 0, discs = [], onSelect, onPlex }) {
+export default function ShowSeasons({
+  title,
+  seasonCount = 0,
+  seasonNumbers = null,
+  discs = [],
+  onSelect,
+  onPlex,
+}) {
   const copiesBySeason = new Map();
   const unnumbered = [];
 
@@ -17,12 +24,17 @@ export default function ShowSeasons({ title, seasonCount = 0, discs = [], onSele
   });
 
   const ownedSeasons = [...copiesBySeason.keys()];
-  const total = Math.max(Number(seasonCount) || 0, ...ownedSeasons);
+  // The exact seasons Plex holds, when the last sync recorded them, so a season
+  // Plex is missing is never marked as being there.
+  const plexSeasons = Array.isArray(seasonNumbers) && seasonNumbers.length ? seasonNumbers : null;
+  const total = Math.max(Number(seasonCount) || 0, ...ownedSeasons, ...(plexSeasons || [0]));
   const seasons = Array.from({ length: total }, (_, index) => index + 1);
+  const onServer = (season) =>
+    plexSeasons ? plexSeasons.includes(season) : season <= Number(seasonCount || 0);
 
   const row = (season, copies) => {
     const owned = copies.length > 0;
-    const inPlex = season <= Number(seasonCount || 0);
+    const inPlex = onServer(season);
 
     if (!owned && !inPlex) {
       return (

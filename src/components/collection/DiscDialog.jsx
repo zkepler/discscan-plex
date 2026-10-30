@@ -147,6 +147,7 @@ export default function DiscDialog({
         <ShowSeasons
           title={show.title}
           seasonCount={show.seasonCount}
+          seasonNumbers={show.seasonNumbers}
           discs={show.discs}
           onSelect={(seasonDisc) => onSelectSeason?.(seasonDisc)}
           onPlex={onPlex}

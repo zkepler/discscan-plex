@@ -74,7 +74,8 @@ export default function Collection() {
         { limit: 200 }
       );
       (page.items || []).forEach((row) => {
-        if (row.season_count) seasonMap[row.rating_key] = row.season_count;
+        if (!row.season_count && !row.season_numbers?.length) return;
+        seasonMap[row.rating_key] = { count: row.season_count || null, numbers: row.season_numbers || null };
       });
     }
     setSeasons(seasonMap);
@@ -158,7 +159,7 @@ export default function Collection() {
   };
 
   // A show opens its disc details with every season listed underneath.
-  const openShow = ({ title, discs: copies, seasonCount }) => {
+  const openShow = ({ title, discs: copies, seasonCount, seasonNumbers }) => {
     const numbered = copies
       .filter((disc) => seasonNumber(disc.title) !== null)
       .sort((a, b) => seasonNumber(a.title) - seasonNumber(b.title));
@@ -167,6 +168,7 @@ export default function Collection() {
       key: numbered.length ? showBase(first.title) : '',
       title,
       seasonCount,
+      seasonNumbers,
       copies,
     });
     openDisc(first);
@@ -181,6 +183,7 @@ export default function Collection() {
     return {
       title: (live && live.showTitle) || showAnchor.title,
       seasonCount: showAnchor.seasonCount,
+      seasonNumbers: showAnchor.seasonNumbers,
       discs: copies,
     };
   }, [showAnchor, discs]);

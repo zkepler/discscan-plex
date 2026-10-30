@@ -19,7 +19,10 @@ export default function DiscCard({
   const viewed = watchState(discs, watch);
 
   const plexDisc = discs.find((disc) => disc.plex_rating_key);
-  const seasonCount = seasons[plexDisc?.plex_rating_key] || null;
+  // What Plex holds for this show: its season count and the exact season numbers.
+  const plexSeasons = seasons[plexDisc?.plex_rating_key] || null;
+  const seasonCount = plexSeasons?.count || null;
+  const seasonNumbers = plexSeasons?.numbers || null;
   const plexQuery = plexDisc?.plex_title || plexDisc?.title || primary.title || '';
 
   // Seasons of one show stack onto a single card, filed under the show's name.
@@ -33,7 +36,7 @@ export default function DiscCard({
   // A show opens its season list; a movie opens its own copy.
   const openCard = () =>
     seasonDisc || seasonCount
-      ? onOpenShow?.({ title: heading, discs, seasonCount })
+      ? onOpenShow?.({ title: heading, discs, seasonCount, seasonNumbers })
       : onSelect(primary);
 
   // One bold tag per format this movie is owned in.

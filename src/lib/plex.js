@@ -63,14 +63,15 @@ async function regularSeasons(config, sectionKey) {
   const data = await getJson(
     plexUrl(config.plex_url, config.plex_token, `/library/sections/${sectionKey}/all?type=3`)
   );
-  const counts = new Map();
+  const seasons = new Map();
   (data?.MediaContainer?.Metadata || []).forEach((item) => {
     const show = String(item.parentRatingKey ?? '');
     const season = Number(item.index ?? 0);
     if (!show || !Number.isFinite(season) || season < 1) return;
-    counts.set(show, Math.max(counts.get(show) || 0, season));
+    const list = seasons.get(show) || [];
+    if (!list.includes(season)) seasons.set(show, [...list, season].sort((a, b) => a - b));
   });
-  return counts;
+  return seasons;
 }
 
 // Used when the server can only be reached from this device (home network, Remote Access off).
@@ -94,6 +95,7 @@ export async function fetchLibraryMoviesInBrowser(config, onProgress, kinds) {
       const resolution = item.Media?.[0]?.videoResolution || null;
       const kind = kindFor(section.kind, resolution);
       if (wanted && !wanted.has(kind)) return;
+      const plexSeasons = kind === 'show' ? seasonCounts?.get(String(item.ratingKey)) || null : null;
       byKey.set(String(item.ratingKey), {
         rating_key: String(item.ratingKey),
         title: item.title || 'Untitled',
@@ -111,10 +113,13 @@ export async function fetchLibraryMoviesInBrowser(config, onProgress, kinds) {
               : 0),
         season_count:
           kind === 'show'
-            ? seasonCounts?.size
-              ? seasonCounts.get(String(item.ratingKey)) || null
-              : Number(item.childCount || 0) || null
+            ? plexSeasons?.length
+              ? plexSeasons[plexSeasons.length - 1]
+              : seasonCounts?.size
+                ? null
+                : Number(item.childCount || 0) || null
             : null,
+        season_numbers: plexSeasons,
         last_viewed_at: item.lastViewedAt ? Number(item.lastViewedAt) * 1000 : null,
         view_count: Number(item.viewCount || 0),
       });

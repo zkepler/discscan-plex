@@ -14,6 +14,7 @@ const TRACKED = [
   'added_at',
   'progress_pct',
   'season_count',
+  'season_numbers',
   'last_viewed_at',
   'view_count',
 ];

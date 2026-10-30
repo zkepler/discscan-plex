@@ -47,7 +47,14 @@
     },
     "season_count": {
       "type": "number",
-      "description": "Number of seasons Plex holds for a TV show"
+      "description": "Highest regular season number Plex holds for a TV show, specials excluded"
+    },
+    "season_numbers": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Season numbers Plex holds for a TV show, specials (season 0) excluded"
     },
     "last_viewed_at": {
       "type": "number",
