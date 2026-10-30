@@ -109,39 +109,93 @@ function isBlockedHost(hostname: string): boolean {
   return false;
 }
 
-async function resolvesToPublicHost(hostname: string): Promise<boolean> {
-  const host = String(hostname || '')
+function normalizeHost(hostname: string): string {
+  return String(hostname || '')
     .toLowerCase()
     .replace(/\.$/, '')
     .replace(/^\[|\]$/g, '');
-  // IP literals were already classified above; only real names need a lookup.
-  if (ipv4ToInt(host) !== null || host.includes(':')) return true;
+}
 
-  const resolveDns = (globalThis as any).Deno?.resolveDns;
-  if (typeof resolveDns !== 'function') return true;
+function isIpLiteral(host: string): boolean {
+  return ipv4ToInt(host) !== null || host.includes(':');
+}
 
+function isPublicAddress(address: string): boolean {
+  const value = String(address || '').replace(/^\[|\]$/g, '');
+  if (!value) return false;
+  return value.includes(':') ? isPublicIpv6(value) : isPublicIpv4(value);
+}
+
+// A public DNS-over-HTTPS lookup keeps hostname verification working where the
+// runtime's own resolver is unavailable, so a name is never accepted unverified.
+async function lookupViaDoh(host: string): Promise<string[]> {
   const addresses: string[] = [];
   for (const type of ['A', 'AAAA']) {
     try {
-      const found = await resolveDns.call((globalThis as any).Deno, host, type);
-      if (Array.isArray(found)) addresses.push(...found.map((entry: any) => String(entry)));
-    } catch (error: any) {
-      const name = String(error?.name || '');
-      if (name === 'NotFound' || String(error?.code || '') === 'NotFound') continue;
-      if (/perm|notcapable/i.test(name)) return true; // resolver unavailable: host checks still apply
-      return false;
+      const res = await fetch(
+        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(host)}&type=${type}`,
+        { headers: { Accept: 'application/dns-json' }, signal: AbortSignal.timeout(6000) }
+      );
+      if (!res.ok) continue;
+      const data = await res.json().catch(() => null);
+      for (const answer of Array.isArray(data?.Answer) ? data.Answer : []) {
+        if (answer?.data) addresses.push(String(answer.data));
+      }
+    } catch {
+      /* try the other record type */
     }
   }
-  // Nothing resolvable means the request itself could not connect; the literal-host
-  // checks above already covered the direct-IP forms.
-  if (!addresses.length) return true;
-  return addresses.every((address) =>
-    address.includes(':') ? isPublicIpv6(address) : isPublicIpv4(address)
-  );
+  return addresses;
+}
+
+async function lookupAddresses(host: string): Promise<string[]> {
+  const resolveDns = (globalThis as any).Deno?.resolveDns;
+  if (typeof resolveDns === 'function') {
+    const addresses: string[] = [];
+    let usable = true;
+    for (const type of ['A', 'AAAA']) {
+      try {
+        const found = await resolveDns.call((globalThis as any).Deno, host, type);
+        if (Array.isArray(found)) addresses.push(...found.map((entry: any) => String(entry)));
+      } catch (error: any) {
+        const name = String(error?.name || '');
+        if (name === 'NotFound' || String(error?.code || '') === 'NotFound') continue;
+        usable = false; // resolver blocked or broken: verify through DoH instead
+        break;
+      }
+    }
+    if (usable && addresses.length) return addresses;
+  }
+  return lookupViaDoh(host);
+}
+
+// The answers are kept so the same addresses can be checked again after the
+// request, which is what catches a name that flips to an internal address.
+async function resolvePublicHost(hostname: string): Promise<string[] | null> {
+  const host = normalizeHost(hostname);
+  if (!host) return null;
+  if (isIpLiteral(host)) return isPublicAddress(host) ? [host] : null;
+
+  const addresses = await lookupAddresses(host);
+  // Nothing verifiable is refused rather than waved through.
+  if (!addresses.length) return null;
+  if (!addresses.every(isPublicAddress)) return null;
+  return addresses;
+}
+
+// Plex publishes HTTPS endpoints as IP-derived *.plex.direct names, so the
+// embedded address must be public too — that name can never rebind to an
+// internal address behind the certificate.
+function plexDirectHostAllowed(hostname: string): boolean {
+  const host = normalizeHost(hostname);
+  if (!host.endsWith('.plex.direct')) return true;
+  const embedded = host.slice(0, -'.plex.direct'.length).split('.')[0].replace(/-/g, '.');
+  if (ipv4ToInt(embedded) === null) return true;
+  return isPublicIpv4(embedded);
 }
 
 // Every outbound Plex request goes through this: only public http(s) hosts.
-export async function assertFetchableUrl(rawUrl: string): Promise<URL> {
+async function validateTarget(rawUrl: string): Promise<{ url: URL; addresses: string[] }> {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -154,13 +208,24 @@ export async function assertFetchableUrl(rawUrl: string): Promise<URL> {
   if (parsed.username || parsed.password) {
     throw plexError('That Plex address is not allowed.', 400);
   }
-  if (isBlockedHost(parsed.hostname) || !(await resolvesToPublicHost(parsed.hostname))) {
+  if (isBlockedHost(parsed.hostname)) {
     throw plexError(
       'That Plex address points to a private or internal network, which is not supported.',
       400
     );
   }
-  return parsed;
+  const addresses = await resolvePublicHost(parsed.hostname);
+  if (!addresses || !plexDirectHostAllowed(parsed.hostname)) {
+    throw plexError(
+      'That Plex address points to a private or internal network, or could not be verified, which is not supported.',
+      400
+    );
+  }
+  return { url: parsed, addresses };
+}
+
+export async function assertFetchableUrl(rawUrl: string): Promise<URL> {
+  return (await validateTarget(rawUrl)).url;
 }
 
 // Redirects are followed by hand so each hop is validated, never straight to an internal host.
@@ -169,8 +234,22 @@ export async function safeFetch(
   init: RequestInit = {},
   hops = 0
 ): Promise<Response> {
-  await assertFetchableUrl(url);
-  const res = await fetch(url, { ...init, redirect: 'manual' });
+  const target = await validateTarget(url);
+  const res = await fetch(target.url.toString(), { ...init, redirect: 'manual' });
+
+  // fetch() resolves the name a second time, so the pinned answers are checked
+  // again: a host that now points somewhere internal is never trusted.
+  if (!isIpLiteral(normalizeHost(target.url.hostname))) {
+    const after = await resolvePublicHost(target.url.hostname);
+    if (!after || !after.some((address) => target.addresses.includes(address))) {
+      try {
+        await res.body?.cancel();
+      } catch {
+        // body already consumed/closed
+      }
+      throw plexError('That Plex address changed while connecting, which is not supported.', 400);
+    }
+  }
   if (res.status >= 300 && res.status < 400 && hops < 2) {
     const location = res.headers.get('location');
     if (!location) return res;
