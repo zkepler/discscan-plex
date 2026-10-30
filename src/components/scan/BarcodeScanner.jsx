@@ -10,6 +10,19 @@ const MIRRORED_CAMERA = /iphone|continuity|facetime|front/i;
 const ROTATE_KEY = 'shelfmark-scanner-rotated';
 const MIRROR_KEY = 'shelfmark-scanner-mirrored';
 
+// Stopping the tracks alone leaves Safari holding the camera while the video
+// element still references the stream, so the element is cleared as well.
+const releaseCamera = (element, stream) => {
+  stream?.getTracks().forEach((track) => track.stop());
+  if (!element) return;
+  try {
+    element.pause();
+  } catch {
+    /* ignore */
+  }
+  if (element.srcObject) element.srcObject = null;
+};
+
 // null means "let the camera label decide".
 const storedMirrorPref = () => {
   try {
@@ -100,6 +113,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
 
     let cancelled = false;
     let stream = null;
+    let videoEl = null;
     let timer = null;
     let lastError = null;
     const reader = new BrowserMultiFormatReader();
@@ -170,7 +184,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
       }
 
       if (cancelled) {
-        stream.getTracks().forEach((track) => track.stop());
+        releaseCamera(videoRef.current, stream);
         return;
       }
 
@@ -181,9 +195,10 @@ export default function BarcodeScanner({ onDetected, paused }) {
 
       const video = videoRef.current;
       if (!video) {
-        stream.getTracks().forEach((track) => track.stop());
+        releaseCamera(null, stream);
         return;
       }
+      videoEl = video;
       video.srcObject = stream;
       await video.play().catch(() => {});
       if (cancelled) return;
@@ -209,7 +224,8 @@ export default function BarcodeScanner({ onDetected, paused }) {
     return () => {
       cancelled = true;
       if (timer) clearInterval(timer);
-      stream?.getTracks().forEach((track) => track.stop());
+      // Leaving the tab (or the page) releases the camera completely.
+      releaseCamera(videoEl || videoRef.current, stream);
     };
   }, [deviceId, tabActive, revision]);
 
