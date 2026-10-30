@@ -66,9 +66,17 @@ export default function BarcodeScanner({ onDetected, paused }) {
       return false;
     }
   });
-  const [revision, setRevision] = useState(0);
   const [cameraOn, setCameraOn] = useState(true);
   const tabActive = useTabActive();
+  const liveRef = useRef({ stream: null, video: null });
+  const [hidden, setHidden] = useState(() => document.visibilityState === 'hidden');
+
+  // Switching to another tab, or leaving the app, releases the camera at once.
+  useEffect(() => {
+    if (tabActive && !hidden) return;
+    releaseCamera(liveRef.current.video, liveRef.current.stream);
+    liveRef.current = { stream: null, video: null };
+  }, [tabActive, hidden]);
 
   // Front-facing cameras hand over a flipped image; this reverses it either way.
   const toggleMirror = () => {
@@ -95,12 +103,10 @@ export default function BarcodeScanner({ onDetected, paused }) {
     }
   };
 
-  // iOS/iPadOS suspends the camera stream when Safari goes to the background,
-  // so the preview is restarted once the app is visible again.
+  // iOS/iPadOS suspends the camera stream when Safari goes to the background;
+  // the camera is released there and started again once the app is visible.
   useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') setRevision((count) => count + 1);
-    };
+    const onVisible = () => setHidden(document.visibilityState === 'hidden');
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
@@ -110,8 +116,9 @@ export default function BarcodeScanner({ onDetected, paused }) {
   rotatedRef.current = rotated;
 
   useEffect(() => {
-    // Release the camera while another tab is showing or the camera is switched off.
-    if (!tabActive || !cameraOn) return undefined;
+    // Release the camera while another tab is showing, the app is in the
+    // background, or the camera is switched off.
+    if (!tabActive || !cameraOn || hidden) return undefined;
 
     let cancelled = false;
     let stream = null;
@@ -189,6 +196,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
         releaseCamera(videoRef.current, stream);
         return;
       }
+      liveRef.current = { stream, video: videoRef.current };
 
       const detected = MIRRORED_CAMERA.test(stream.getVideoTracks()[0]?.label || '');
       const flip = mirrorOverrideRef.current ?? detected;
@@ -227,9 +235,10 @@ export default function BarcodeScanner({ onDetected, paused }) {
       cancelled = true;
       if (timer) clearInterval(timer);
       // Leaving the tab (or the page) releases the camera completely.
-      releaseCamera(videoEl || videoRef.current, stream);
+      releaseCamera(videoEl || liveRef.current.video || videoRef.current, liveRef.current.stream || stream);
+      liveRef.current = { stream: null, video: null };
     };
-  }, [deviceId, tabActive, cameraOn, revision]);
+  }, [deviceId, tabActive, cameraOn, hidden]);
 
   return (
     <div>
