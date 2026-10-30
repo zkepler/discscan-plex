@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import AddedRow from '@/components/history/AddedRow';
 import { loadConfig } from '@/lib/appSettings';
-import { History as HistoryIcon } from 'lucide-react';
+import { buildRecentCsv, downloadCsv } from '@/lib/csvExport';
+import { Download, History as HistoryIcon } from 'lucide-react';
 
 const PAGE_SIZE = 25;
 
@@ -36,6 +37,10 @@ export default function History() {
       setLoading(false);
     })();
   }, []);
+
+  const downloadRecent = () => {
+    downloadCsv(`recently-added-${new Date().toISOString().slice(0, 10)}.csv`, buildRecentCsv({ items: added }));
+  };
 
   const showMore = async () => {
     const next = limit + PAGE_SIZE;
@@ -88,9 +93,15 @@ export default function History() {
               : 'Run a sync on the Plex page to fill this in'}
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link to="/plex">Plex library</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={downloadRecent} disabled={added.length === 0}>
+            <Download className="mr-2 h-4 w-4" />
+            Download CSV
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/plex">Plex library</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mt-8 rounded-xl border border-border bg-card px-4">
