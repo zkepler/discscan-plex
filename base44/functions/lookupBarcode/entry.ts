@@ -7,7 +7,7 @@ const FORMAT_PATTERNS = [
   [/\b(?:4k|uhd)\b/i, '4K UHD'],
   [/blu-?ray/i, 'Blu-ray'],
   [/\bvhs\b|video\s?cassette|video\s?tape|videotape|\bbetamax\b/i, 'VHS'],
-  [/\bdvd\b/i, 'DVD'],
+  [/\bdvds?\b/i, 'DVD'],
 ];
 
 function detectFormat(...parts) {
@@ -105,6 +105,37 @@ async function movieDetails(base44, title, year) {
   });
 
   return normalizeDetails(response);
+}
+
+async function webBarcodeLookup(base44, upc) {
+  // Plain text, not a JSON schema: web grounding and structured output do not combine,
+  // and the groundless answer just guesses at the barcode.
+  const spaced = upc.length === 12 ? `${upc[0]} ${upc.slice(1, 6)} ${upc.slice(6, 11)} ${upc[11]}` : '';
+  const response = await base44.asServiceRole.integrations.Core.InvokeLLM({
+    prompt:
+      `Find the movie or TV title released with the barcode ${upc}${spaced ? ` (often printed as ${spaced})` : ''}.\n` +
+      'Search product listings and barcode pages that quote these digits — eBay, Walmart, Amazon, barcodelookup, go-upc, upcitemdb, vhscollector.\n' +
+      'Answer with the title and year only, in the form "Title (Year) - Format", where Format is DVD, Blu-ray, 4K UHD or VHS and the title carries no edition or format words.\n' +
+      'If no listing confirms the barcode, answer exactly: none\n' +
+      'Never guess a title from a similar barcode.',
+    add_context_from_internet: true,
+    model: 'gemini_3_1_pro',
+  });
+
+  const line = String(response || '').trim().split('\n')[0].split('[')[0].trim();
+  if (!line || /^none/i.test(line)) return null;
+
+  const match = line.match(/^(.*?)\s*\((\d{4})\)\s*(?:[-–—]\s*(.+))?$/);
+  const title = cleanWebTitle((match ? match[1] : line).replace(/[*`"]/g, ''));
+  if (!title || /^(?:none|not found|unknown|n\/a)$/i.test(title)) return null;
+
+  const formatHint = match?.[3] || '';
+  return {
+    title,
+    year: match ? Number(match[2]) : null,
+    format: detectFormat(formatHint, title),
+    image: '',
+  };
 }
 
 async function webReleaseSearch(base44, query) {
@@ -263,6 +294,21 @@ export default async function (req: Request): Promise<Response> {
     }
 
     if (!item) {
+      // The catalogue has no record (or is rate-limited) — search the web for the barcode instead.
+      const web = await webBarcodeLookup(base44, upc).catch(() => null);
+      if (web?.title) {
+        const webDetails = await movieDetails(base44, web.title, web.year).catch(() => null);
+        return Response.json({
+          found: true,
+          upc,
+          title: webDetails?.title || web.title,
+          year: webDetails?.year || web.year || null,
+          format: web.format,
+          image: web.image || webDetails?.poster || '',
+          details: webDetails,
+          source: 'web',
+        });
+      }
       return Response.json({ found: false, upc, title: '', image: '', upstream });
     }
 
