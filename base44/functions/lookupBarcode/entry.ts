@@ -1,17 +1,31 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 
-const VIDEO_FORMATS = ['DVD', 'Blu-ray', '4K UHD'];
+const VIDEO_FORMATS = ['DVD', 'Blu-ray', '4K UHD', 'VHS'];
+
+// Most specific format wins: a "Blu-ray + DVD" listing is a Blu-ray, a tape is a tape.
+const FORMAT_PATTERNS = [
+  [/\b(?:4k|uhd)\b/i, '4K UHD'],
+  [/blu-?ray/i, 'Blu-ray'],
+  [/\bvhs\b|video\s?cassette|video\s?tape|videotape|\bbetamax\b/i, 'VHS'],
+  [/\bdvd\b/i, 'DVD'],
+];
+
+function detectFormat(...parts) {
+  const text = parts.filter(Boolean).join(' ');
+  const hit = FORMAT_PATTERNS.find(([pattern]) => pattern.test(text));
+  return hit ? hit[1] : '';
+}
 
 function cleanTitle(raw) {
   return String(raw || '')
     .replace(/\[[^\]]*\]/g, ' ')
     .replace(
-      /\((?:dvd|blu-?ray|4k|uhd|widescreen|fullscreen|full screen|special edition|collector'?s edition|anniversary edition|\d+\s*disc[^)]*|multi-format|digital copy|unrated|rated)[^)]*\)/gi,
+      /\((?:dvd|blu-?ray|4k|uhd|vhs|video\s?cassette|videotape|widescreen|fullscreen|full screen|special edition|collector'?s edition|anniversary edition|\d+\s*disc[^)]*|multi-format|digital copy|unrated|rated)[^)]*\)/gi,
       ' '
     )
     .replace(/\((?:good|very good|acceptable|used|new|like new|sealed)[^)]*\)/gi, ' ')
     .replace(/^(?:pre-?owned|used|new)\s*[-–:]?\s*/i, '')
-    .replace(/\s*[-–]\s*(dvd|blu-?ray|4k.*)$/i, '')
+    .replace(/\s*[-–]\s*(dvd|blu-?ray|vhs|4k.*)$/i, '')
     .replace(/\(\s*\)/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -19,8 +33,8 @@ function cleanTitle(raw) {
 
 function cleanWebTitle(raw) {
   return String(raw || '')
-    .replace(/\((?:dvd|blu-?ray|4k|uhd|widescreen|fullscreen|digital copy)\)/gi, ' ')
-    .replace(/\s*[-–]\s*(dvd|blu-?ray|4k|uhd)\s*$/i, '')
+    .replace(/\((?:dvd|blu-?ray|4k|uhd|vhs|videotape|widescreen|fullscreen|digital copy)\)/gi, ' ')
+    .replace(/\s*[-–]\s*(dvd|blu-?ray|vhs|4k|uhd)\s*$/i, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -96,14 +110,14 @@ async function movieDetails(base44, title, year) {
 async function webReleaseSearch(base44, query) {
   const response = await base44.asServiceRole.integrations.Core.InvokeLLM({
     prompt:
-      `Search the web for the physical disc editions of "${query}" sold today — DVD, Blu-ray, 4K UHD, anniversary, collector and special editions.\n` +
-      'Look across retailer and catalogue pages (Blu-ray.com, Amazon, Best Buy, Walmart, eBay, Wikipedia) for real releases.\n' +
-      `Return 5 to 8 entries, most relevant first, one entry per edition rather than one per film — the collector wants options, so do not stop at a single best match.\n` +
-      'Put the film or show name plus the edition name in the title (for example "Blade Runner: The Final Cut" or "Blade Runner (30th Anniversary Collector\'s Edition)"), but leave disc format words such as DVD, Blu-ray and 4K out of it and report them in format instead.\n' +
+      `Search the web for the physical editions of "${query}" that exist as real releases — DVD, Blu-ray, 4K UHD and vintage VHS tape, including anniversary, collector and special editions. Secondhand and out-of-print releases count: a tape from 1988 is a valid answer.\n` +
+      'Look across retailer and catalogue pages (Blu-ray.com, Amazon, Best Buy, Walmart, eBay, VHScollector, Wikipedia) for real releases.\n' +
+      `Return 5 to 8 entries, most relevant first, one entry per edition rather than one per film — the collector wants options, so do not stop at a single best match. When VHS tape editions exist, include at least one of them.\n` +
+      'Put the film or show name plus the edition name in the title (for example "Blade Runner: The Final Cut" or "Blade Runner (30th Anniversary Collector\'s Edition)"), but leave format words such as DVD, Blu-ray, 4K and VHS out of it and report them in format instead.\n' +
       'For each release provide:\n' +
       '- title: the film or show name only\n' +
       '- year: the film release year as a 4-digit integer, when the page states it\n' +
-      '- format: exactly one of "DVD", "Blu-ray", "4K UHD"\n' +
+      '- format: exactly one of "DVD", "Blu-ray", "4K UHD", "VHS"\n' +
       '- upc: the release barcode (UPC/EAN digits) only when a page states it\n' +
       '- image: a direct https image URL of that release cover art from a public site\n' +
       'Never invent barcodes, years or image URLs — omit any field you cannot verify.',
@@ -137,7 +151,7 @@ async function webReleaseSearch(base44, query) {
     .map((entry) => ({
       title: cleanWebTitle(entry.title),
       year: entry.year || null,
-      format: VIDEO_FORMATS.includes(entry.format) ? entry.format : '',
+      format: VIDEO_FORMATS.includes(entry.format) ? entry.format : detectFormat(entry.format, entry.title),
       upc: String(entry.upc || '').replace(/\D/g, ''),
       image: typeof entry.image === 'string' && /^https?:\/\//i.test(entry.image) ? entry.image : '',
     }))
@@ -145,7 +159,7 @@ async function webReleaseSearch(base44, query) {
 }
 
 const NOISE = /funko|\bpop!?\b|action figure|figure|statue|poster|t-?shirt|apparel|soundtrack|vinyl|\bcd\b|\bbook\b|novel|comic|video game|board game|\bmug\b|\btoy\b/i;
-const MEDIA = /dvd|blu-?ray|4k|uhd|movie|film|video/i;
+const MEDIA = /dvd|blu-?ray|4k|uhd|movie|film|video|\bvhs\b|video\s?cassette|videotape/i;
 
 async function catalogSearch(query) {
   const res = await fetch(
@@ -168,7 +182,7 @@ async function catalogSearch(query) {
         upc: String(entry.upc || entry.ean || '').replace(/\D/g, ''),
         image: Array.isArray(entry.images) && entry.images.length ? entry.images[0] : '',
         year: yearMatch ? Number(yearMatch[0]) : null,
-        format: '',
+        format: detectFormat(raw, entry.category),
       };
     })
     .filter((entry) => entry.title);
@@ -220,21 +234,32 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: 'Enter a valid barcode' }, { status: 400 });
     }
 
+    // Tape era barcodes are patchy: scanners return 13-digit codes padded with a
+    // leading zero, and older sleeves are often printed without it — try each spelling.
+    const candidates = [upc];
+    if (upc.length === 13 && upc.startsWith('0')) candidates.push(upc.slice(1));
+    if (upc.length === 12) candidates.push(`0${upc}`);
+    if (upc.length === 10 || upc.length === 11) candidates.push(upc.padStart(12, '0'));
+
     let item = null;
     let upstream = 'none';
-    try {
-      const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${upc}`, {
-        headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(12000),
-      });
-      upstream = String(res.status);
-      const data = await res.json().catch(() => ({}));
-      const items = Array.isArray(data?.items) ? data.items : [];
-      item = items.find((entry) => !/^\s*pre-?owned/i.test(entry.title || '')) || items[0] || null;
-      if (!item) upstream = `${res.status}:${data?.code || 'empty'}`;
-    } catch (lookupError) {
-      item = null;
-      upstream = `error:${lookupError?.name || 'unknown'}`;
+    for (const code of candidates) {
+      try {
+        const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`, {
+          headers: { Accept: 'application/json' },
+          signal: AbortSignal.timeout(12000),
+        });
+        upstream = String(res.status);
+        const data = await res.json().catch(() => ({}));
+        const items = Array.isArray(data?.items) ? data.items : [];
+        item = items.find((entry) => !/^\s*pre-?owned/i.test(entry.title || '')) || items[0] || null;
+        if (!item) upstream = `${res.status}:${data?.code || 'empty'}`;
+      } catch (lookupError) {
+        item = null;
+        upstream = `error:${lookupError?.name || 'unknown'}`;
+      }
+      // A rate limit or rejected request will not improve on another spelling.
+      if (item || /^4/.test(upstream)) break;
     }
 
     if (!item) {
@@ -243,6 +268,7 @@ export default async function (req: Request): Promise<Response> {
 
     const image = Array.isArray(item.images) && item.images.length ? item.images[0] : '';
     const title = cleanTitle(item.title);
+    const format = detectFormat(item.title, item.category) || detectFormat(item.description);
     const details = await movieDetails(base44, title, null).catch(() => null);
 
     return Response.json({
@@ -250,6 +276,7 @@ export default async function (req: Request): Promise<Response> {
       upc,
       title: details?.title || title,
       year: details?.year || null,
+      format,
       brand: item.brand || '',
       category: item.category || '',
       image: image || details?.poster || '',

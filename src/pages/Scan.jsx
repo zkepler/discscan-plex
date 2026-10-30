@@ -123,8 +123,8 @@ export default function Scan() {
       <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Add to the archive</p>
       <h1 className="mt-2 font-display text-4xl leading-none text-foreground sm:text-5xl">Scan a disc</h1>
       <p className="mt-3 max-w-lg text-sm text-muted-foreground">
-        Point the camera at the barcode on the case. We look up the title, then check whether it is already in your
-        Plex library.
+        Point the camera at the barcode on the case or tape sleeve. We look up the title, then check whether it is
+        already in your Plex library.
       </p>
 
       {!capture ? (
