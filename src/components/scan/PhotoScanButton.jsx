@@ -19,7 +19,8 @@ export default function PhotoScanButton({ onDetected, onIdentified }) {
   const readCover = async (file) => {
     setNote('No barcode in that photo — reading the cover…');
     const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
-    const response = await base44.functions.invoke('identifyFromPhoto', { file_uri });
+    const { signed_url } = await base44.integrations.Core.CreateFileSignedUrl({ file_uri });
+    const response = await base44.functions.invoke('identifyFromPhoto', { image_url: signed_url });
     const data = response.data || {};
     if (data.found && data.title) {
       setNote('');

@@ -1,6 +1,23 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
+import { secrets } from 'base44:runtime';
 
 const FORMATS = ['DVD', 'Blu-ray', '4K UHD', 'VHS', 'LaserDisc', 'Other'];
+
+// The caller hands over a short-lived link it made itself, and only a link into
+// this app's own storage is accepted: the function never mints an access link
+// for a file reference it was given.
+function isOwnPrivateImage(raw, appId) {
+  let parsed;
+  try {
+    parsed = new URL(String(raw || ''));
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'https:') return false;
+  if (parsed.hostname.toLowerCase() !== 'media.base44.com') return false;
+  if (!parsed.pathname.startsWith(`/images/private/${appId}/`)) return false;
+  return Boolean(parsed.searchParams.get('token'));
+}
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -9,14 +26,11 @@ export default async function (req: Request): Promise<Response> {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const fileUri = String(body?.file_uri || '').trim();
-    if (!fileUri) return Response.json({ error: 'file_uri is required' }, { status: 400 });
-
-    // The photo is stored privately, so the model reads it through a short-lived link.
-    const signed = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
-      file_uri: fileUri,
-      expires_in: 300,
-    });
+    const imageUrl = String(body?.image_url || '').trim();
+    if (!imageUrl) return Response.json({ error: 'image_url is required' }, { status: 400 });
+    if (!isOwnPrivateImage(imageUrl, secrets.get('BASE44_APP_ID'))) {
+      return Response.json({ error: 'Unsupported image' }, { status: 400 });
+    }
 
     const answer = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt:
@@ -27,7 +41,7 @@ export default async function (req: Request): Promise<Response> {
         '- year: the release year of the film or show printed on the artwork as a 4-digit integer, when visible\n' +
         '- format: exactly one of "DVD", "Blu-ray", "4K UHD", "VHS", "LaserDisc", "Other", judged from the case shape, logos and sleeve style\n' +
         'Never guess: if the artwork is too blurry, cropped, or shows no title, answer found: false.',
-      file_urls: [signed?.signed_url],
+      file_urls: [imageUrl],
       model: 'gemini_3_8_flash',
       response_json_schema: {
         type: 'object',
