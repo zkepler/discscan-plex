@@ -35,7 +35,7 @@ export default function ShareDialog({ open, onOpenChange, discs }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] min-h-[84vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[94vh] min-h-[84vh] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Share the collection</DialogTitle>
           <DialogDescription>
