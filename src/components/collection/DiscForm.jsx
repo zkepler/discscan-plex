@@ -1,13 +1,21 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Pencil } from 'lucide-react';
 import DiscPlexMatch from '@/components/collection/DiscPlexMatch';
 import DiscExternalLinks from '@/components/collection/DiscExternalLinks';
 import FormatPicker from '@/components/collection/FormatPicker';
 import PosterLightbox from '@/components/collection/PosterLightbox';
+import MetadataSummary from '@/components/collection/MetadataSummary';
+import MetadataFields from '@/components/collection/MetadataFields';
+import MetadataImport from '@/components/collection/MetadataImport';
+import PlexMetadataPull from '@/components/collection/PlexMetadataPull';
 
-export default function DiscForm({ disc, form, set, confirming, onSave, onRemove, onClose }) {
+export default function DiscForm({ disc, form, set, confirming, onSave, onRemove, onClose, onMetadata }) {
+  const [editingMeta, setEditingMeta] = useState(false);
+
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
@@ -36,6 +44,47 @@ export default function DiscForm({ disc, form, set, confirming, onSave, onRemove
         <p className="text-xs text-muted-foreground">
           This copy keeps the first format — any others are added as extra copies.
         </p>
+      </div>
+
+      <div className="space-y-3 border-t border-border/70 pt-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg leading-none text-foreground">Metadata &amp; rich details</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cast, synopsis and release details for this copy.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditingMeta((value) => !value)}
+            className="select-none"
+          >
+            {editingMeta ? null : <Pencil className="mr-1.5 h-3.5 w-3.5" />}
+            {editingMeta ? 'Done' : 'Edit'}
+          </Button>
+        </div>
+
+        <PlexMetadataPull
+          title={form.title}
+          year={form.year}
+          format={form.formats[0]}
+          ratingKey={form.plex_rating_key}
+          onMetadata={onMetadata}
+        />
+
+        {editingMeta ? (
+          <>
+            <MetadataImport
+              onImport={(patch) => onMetadata(patch)}
+              onCover={(url) => set('cover_url', url)}
+            />
+            <MetadataFields form={form} set={set} />
+          </>
+        ) : (
+          <MetadataSummary form={form} />
+        )}
       </div>
 
       <div className="space-y-3">
