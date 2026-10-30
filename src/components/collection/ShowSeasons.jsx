@@ -13,7 +13,6 @@ export default function ShowSeasons({
   discs = [],
   config,
   onSelect,
-  onPlex,
 }) {
   const [openSeason, setOpenSeason] = useState(null);
 
@@ -114,13 +113,11 @@ export default function ShowSeasons({
 
         {open ? (
           <SeasonDetails
-            title={title}
             season={season}
             copies={shelfCopies}
             config={config}
             plexKey={plexKey}
             onOpenCopy={onSelect}
-            onPlex={onPlex}
           />
         ) : null}
       </div>

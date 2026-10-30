@@ -152,7 +152,6 @@ export default function DiscDialog({
           discs={show.discs}
           config={config}
           onSelect={(seasonDisc) => onSelectSeason?.(seasonDisc)}
-          onPlex={onPlex}
         />
       ) : null}
     </div>

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { formatStyle } from '@/lib/mediaStyles';
 
 // The season itself: your copies of it, plus the episodes Plex holds for it.
-export default function SeasonDetails({ title, season, copies = [], config, plexKey, onOpenCopy, onPlex }) {
+export default function SeasonDetails({ season, copies = [], config, plexKey, onOpenCopy }) {
   const [details, setDetails] = useState(null);
   const [state, setState] = useState('idle');
   const [error, setError] = useState('');
@@ -134,15 +134,6 @@ export default function SeasonDetails({ title, season, copies = [], config, plex
         </>
       ) : null}
 
-      {onPlex ? (
-        <button
-          type="button"
-          onClick={() => onPlex(title)}
-          className="text-xs font-semibold uppercase tracking-[0.1em] text-primary"
-        >
-          Open in Plex library
-        </button>
-      ) : null}
     </div>
   );
 }
