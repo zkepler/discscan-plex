@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { X } from 'lucide-react';
+import { CameraOff, X } from 'lucide-react';
 import BarcodeScanner from '@/components/scan/BarcodeScanner';
 import BulkScanLog from '@/components/scan/BulkScanLog';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ let rowSeq = 0;
 
 export default function BulkScanner() {
   const [rows, setRows] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [finished, setFinished] = useState(false);
   const queueRef = useRef([]);
   const workingRef = useRef(false);
   const seenRef = useRef(new Map());
@@ -62,6 +64,7 @@ export default function BulkScanner() {
   // Saves are handled one at a time so a quick burst of barcodes cannot collide.
   const drain = async () => {
     workingRef.current = true;
+    setBusy(true);
     while (queueRef.current.length) {
       const { code, id } = queueRef.current.shift();
       try {
@@ -71,6 +74,7 @@ export default function BulkScanner() {
       }
     }
     workingRef.current = false;
+    setBusy(false);
   };
 
   const take = (raw) => {
@@ -89,7 +93,52 @@ export default function BulkScanner() {
     if (!workingRef.current) drain();
   };
 
-  const saved = rows.filter((row) => row.status === 'saved').length;
+  const count = (status) => rows.filter((row) => row.status === status).length;
+  const saved = count('saved');
+
+  // Leaving pile mode unmounts the camera, which releases it.
+  const finish = () => {
+    setFinished(true);
+    navigator.vibrate?.(25);
+  };
+
+  const restart = () => {
+    seenRef.current.clear();
+    setRows([]);
+    setFinished(false);
+  };
+
+  if (finished) {
+    const duplicates = count('duplicate');
+    const unknown = count('unknown') + count('failed');
+
+    return (
+      <div className="rounded-xl border border-border bg-card p-5">
+        <p className="font-display text-2xl text-foreground">Session saved</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {busy
+            ? 'Finishing the last disc — your camera is off, this closes on its own.'
+            : `${saved} disc${saved === 1 ? '' : 's'} added to your shelf.`}
+        </p>
+        {duplicates ? (
+          <p className="mt-1 text-xs text-muted-foreground">{duplicates} were already on the shelf.</p>
+        ) : null}
+        {unknown ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {unknown} couldn&apos;t be identified — scan those one at a time and add them by title.
+          </p>
+        ) : null}
+
+        <div className="mt-4">
+          <BulkScanLog rows={rows} />
+        </div>
+
+        <Button className="mt-4 w-full" onClick={restart}>
+          Scan another pile
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -114,6 +163,11 @@ export default function BulkScanner() {
         <div className="mt-3">
           <BulkScanLog rows={rows} />
         </div>
+
+        <Button variant="secondary" className="mt-4 w-full" onClick={finish}>
+          <CameraOff className="mr-2 h-4 w-4" />
+          Done scanning
+        </Button>
       </div>
     </div>
   );
