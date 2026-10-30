@@ -7,6 +7,7 @@ import PlexLibrary from '@/pages/PlexLibrary';
 import History from '@/pages/History';
 import SettingsPage from '@/pages/SettingsPage';
 import { TabActiveContext } from '@/lib/tabActive';
+import { stopAllCameraStreams } from '@/lib/cameraStreams';
 
 const TABS = [
   { path: '/', Component: Collection },
@@ -26,6 +27,11 @@ export default function TabHost() {
 
   useEffect(() => {
     setVisited((prev) => (prev.has(pathname) ? prev : new Set(prev).add(pathname)));
+  }, [pathname]);
+
+  // Changing tabs always turns the camera off, whatever the scanner was doing.
+  useEffect(() => {
+    stopAllCameraStreams();
   }, [pathname]);
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import CameraSelect from '@/components/scan/CameraSelect';
 import PhotoScanButton from '@/components/scan/PhotoScanButton';
 import { useTabActive } from '@/lib/tabActive';
+import { trackCameraStream } from '@/lib/cameraStreams';
 
 // Continuity Camera (and other front-facing cameras) hand over a mirrored image.
 const MIRRORED_CAMERA = /iphone|continuity|facetime|front/i;
@@ -197,6 +198,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
         return;
       }
       liveRef.current = { stream, video: videoRef.current };
+      trackCameraStream(stream);
 
       const detected = MIRRORED_CAMERA.test(stream.getVideoTracks()[0]?.label || '');
       const flip = mirrorOverrideRef.current ?? detected;
@@ -239,6 +241,9 @@ export default function BarcodeScanner({ onDetected, paused }) {
       liveRef.current = { stream: null, video: null };
     };
   }, [deviceId, tabActive, cameraOn, hidden]);
+
+  // Nothing keeps a camera preview alive while another tab is showing.
+  if (!tabActive) return null;
 
   return (
     <div>
