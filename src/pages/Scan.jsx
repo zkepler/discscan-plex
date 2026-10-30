@@ -5,15 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import BarcodeScanner from '@/components/scan/BarcodeScanner';
+import BulkScanner from '@/components/scan/BulkScanner';
 import ScanResultForm from '@/components/scan/ScanResultForm';
 import TitleSearch from '@/components/scan/TitleSearch';
-import { Loader2, ScanLine, Search } from 'lucide-react';
+import { Layers, Loader2, ScanLine, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTabReselect } from '@/lib/tabReset';
 
 const MODES = [
-  { id: 'scan', label: 'Scan barcode', icon: ScanLine },
-  { id: 'title', label: 'Search by title', icon: Search },
+  { id: 'scan', label: 'Scan', icon: ScanLine },
+  { id: 'bulk', label: 'Pile mode', icon: Layers },
+  { id: 'title', label: 'By title', icon: Search },
 ];
 
 export default function Scan() {
@@ -128,7 +130,7 @@ export default function Scan() {
       </p>
 
       {!capture ? (
-        <div className="mt-6 grid grid-cols-2 gap-1 rounded-full border border-border p-1">
+        <div className="mt-6 grid grid-cols-3 gap-1 rounded-full border border-border p-1">
           {MODES.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -153,6 +155,8 @@ export default function Scan() {
           <ScanResultForm capture={capture} onDone={reset} onCancel={reset} />
         ) : mode === 'title' ? (
           <TitleSearch onPick={pickTitle} />
+        ) : mode === 'bulk' ? (
+          <BulkScanner />
         ) : (
           <>
             <BarcodeScanner onDetected={identify} paused={paused} />
