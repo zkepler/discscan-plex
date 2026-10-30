@@ -3,7 +3,7 @@ const FORMAT_STYLES = {
   DVD: 'border-slate-300/40 bg-slate-300/15 text-slate-100',
   'Blu-ray': 'border-sky-400/40 bg-sky-400/15 text-sky-300',
   '4K UHD': 'border-primary/50 bg-primary/15 text-primary',
-  VHS: 'border-amber-400/40 bg-amber-400/15 text-amber-300',
+  VHS: 'border-white/30 bg-white/15 text-white/85',
   LaserDisc: 'border-violet-400/40 bg-violet-400/15 text-violet-300',
   Other: 'border-white/25 bg-white/10 text-white/70',
 };
@@ -19,7 +19,7 @@ const FORMAT_BANNER_STYLES = {
   DVD: 'bg-slate-600 text-white',
   'Blu-ray': 'bg-sky-600 text-white',
   '4K UHD': 'bg-primary text-primary-foreground',
-  VHS: 'bg-amber-600 text-white',
+  VHS: 'bg-accent text-accent-foreground',
   LaserDisc: 'bg-violet-600 text-white',
   Other: 'bg-muted text-muted-foreground',
 };
