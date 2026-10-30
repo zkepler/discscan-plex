@@ -41,6 +41,46 @@
     },
     "plex_title": {
       "type": "string"
+    },
+    "directors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Directors or creators of the title"
+    },
+    "studio": {
+      "type": "string",
+      "description": "Studio, label or distributor"
+    },
+    "runtime_minutes": {
+      "type": "number",
+      "description": "Run time in whole minutes"
+    },
+    "genres": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rating": {
+      "type": "string",
+      "description": "Content rating, e.g. PG-13 or R"
+    },
+    "cast": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lead cast members"
+    },
+    "plot": {
+      "type": "string",
+      "description": "Synopsis of the title"
+    },
+    "edition": {
+      "type": "string",
+      "description": "Edition or release, e.g. Director's Cut, Steelbook"
     }
   },
   "required": [

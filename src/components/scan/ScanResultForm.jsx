@@ -10,6 +10,7 @@ import { pullPostersForDiscs } from '@/lib/plexPosters';
 import { FORMATS } from '@/lib/constants';
 import { addFormatCopies } from '@/lib/discCopies';
 import { filmCopies } from '@/lib/duplicates';
+import { normaliseMetadata } from '@/lib/discMetadata';
 import FormatPicker from '@/components/collection/FormatPicker';
 import MovieDetailsCard from '@/components/scan/MovieDetailsCard';
 import { Check } from 'lucide-react';
@@ -82,15 +83,24 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
       onDone();
 
       const match = await findPlexMatch(title, year, formats[0]);
+      const meta = normaliseMetadata(capture.details);
       const created = await base44.entities.Disc.create({
         title,
         upc: draft.upc,
-        year: draft.year,
+        year: draft.year || meta.year || null,
         format: draft.format,
         location: draft.location,
         cover_url: draft.cover_url,
         plex_rating_key: match?.rating_key || null,
         plex_title: match?.title || null,
+        directors: meta.directors || [],
+        studio: meta.studio || '',
+        runtime_minutes: meta.runtime_minutes ?? null,
+        genres: meta.genres || [],
+        rating: meta.rating || '',
+        cast: meta.cast || [],
+        plot: meta.plot || '',
+        edition: meta.edition || '',
       });
       emitDisc({ type: 'replace', id: draft.id, disc: created });
 
