@@ -15,10 +15,12 @@ import PlexMovieRow from '@/components/plex/PlexMovieRow';
 import { loadConfig } from '@/lib/appSettings';
 import { syncPlexLibrary } from '@/lib/plexSync';
 import { escapeRegex } from '@/lib/matching';
+import { listAllPlexMovies } from '@/lib/plexStore';
+import { buildPlexLibraryCsv, downloadCsv } from '@/lib/csvExport';
 import { useTabReselect } from '@/lib/tabReset';
 import PullIndicator from '@/components/PullIndicator';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
-import { ChevronDown, Loader2, RefreshCw, Search, Tv } from 'lucide-react';
+import { ChevronDown, Download, Loader2, RefreshCw, Search, Tv } from 'lucide-react';
 
 const PAGE_SIZE = 50;
 
@@ -53,6 +55,7 @@ export default function PlexLibrary() {
   const [debounced, setDebounced] = useState(
     () => (new URLSearchParams(window.location.search).get('q') || '').trim().toLowerCase()
   );
+  const [exporting, setExporting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncingScope, setSyncingScope] = useState('all');
   const [progress, setProgress] = useState('');
@@ -109,6 +112,22 @@ export default function PlexLibrary() {
     const page = await queryPage(debounced, cursor, kind);
     setMovies((prev) => [...prev, ...(page.items || [])]);
     setCursor(page.next_cursor || null);
+  };
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const items = await listAllPlexMovies();
+      downloadCsv(
+        `plex-library-${new Date().toISOString().slice(0, 10)}.csv`,
+        buildPlexLibraryCsv({ items, ownedKeys })
+      );
+      toast({ title: 'Library exported', description: `${items.length} titles in the CSV` });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Export failed', description: error.message });
+    } finally {
+      setExporting(false);
+    }
   };
 
   const sync = async (scope = 'all') => {
@@ -172,27 +191,37 @@ export default function PlexLibrary() {
               : 'Never synced'}
           </p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button disabled={syncing}>
-              {syncing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              {syncing ? `Syncing ${labelFor(syncingScope)}…` : 'Sync'}
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Sync from Plex</DropdownMenuLabel>
-            {KIND_FILTERS.map((option) => (
-              <DropdownMenuItem key={option.value} onClick={() => sync(option.value)}>
-                {option.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={exportCsv} disabled={exporting || syncing}>
+            {exporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={syncing}>
+                {syncing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {syncing ? `Syncing ${labelFor(syncingScope)}…` : 'Sync'}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Sync from Plex</DropdownMenuLabel>
+              {KIND_FILTERS.map((option) => (
+                <DropdownMenuItem key={option.value} onClick={() => sync(option.value)}>
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {syncing && progress ? <p className="mt-3 text-xs text-primary">{progress}</p> : null}
