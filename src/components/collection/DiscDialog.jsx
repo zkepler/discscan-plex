@@ -15,6 +15,7 @@ export default function DiscDialog({
   disc,
   editMetadata,
   show,
+  config,
   onClose,
   onChange,
   onSelectSeason,
@@ -149,6 +150,7 @@ export default function DiscDialog({
           seasonCount={show.seasonCount}
           seasonNumbers={show.seasonNumbers}
           discs={show.discs}
+          config={config}
           onSelect={(seasonDisc) => onSelectSeason?.(seasonDisc)}
           onPlex={onPlex}
         />

@@ -1,6 +1,9 @@
-import { Check, PlayCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, ChevronDown, PlayCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { seasonNumber } from '@/lib/groupDiscs';
 import { formatStyle } from '@/lib/mediaStyles';
+import SeasonDetails from '@/components/collection/SeasonDetails';
 
 // Every season the show has, with the ones on the shelf and the ones only Plex holds.
 export default function ShowSeasons({
@@ -8,9 +11,14 @@ export default function ShowSeasons({
   seasonCount = 0,
   seasonNumbers = null,
   discs = [],
+  config,
   onSelect,
   onPlex,
 }) {
+  const [openSeason, setOpenSeason] = useState(null);
+
+  useEffect(() => setOpenSeason(null), [title]);
+
   const copiesBySeason = new Map();
   const unnumbered = [];
 
@@ -22,6 +30,9 @@ export default function ShowSeasons({
     }
     copiesBySeason.set(season, [...(copiesBySeason.get(season) || []), disc]);
   });
+
+  // The key the collection copy is matched to in Plex, used to read a season back.
+  const plexKey = discs.find((disc) => disc.plex_rating_key)?.plex_rating_key || null;
 
   const ownedSeasons = [...copiesBySeason.keys()];
   // The exact seasons Plex holds, when the last sync recorded them, so a season
@@ -44,59 +55,75 @@ export default function ShowSeasons({
     const inPlex = onServer(season);
     const shelfCopies = copies.length ? copies : showWide && inPlex ? unnumbered : [];
     const owned = shelfCopies.length > 0;
-
-    if (!owned && !inPlex) {
-      return (
-        <div
-          key={`season-${season}`}
-          className="flex w-full items-center justify-between gap-3 rounded-lg border border-dashed border-border/70 px-3 py-2.5 opacity-60"
-        >
-          <span className="block text-sm font-medium text-foreground">Season {season}</span>
-          <span className="shrink-0 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            Not owned
-          </span>
-        </div>
-      );
-    }
+    const open = openSeason === season;
 
     return (
-      <button
+      <div
         key={`season-${season}`}
-        type="button"
-        onClick={() => (owned ? onSelect(shelfCopies[0]) : onPlex?.(title))}
-        className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary"
-      >
-        <span className="min-w-0">
-          <span className="block text-sm font-medium text-foreground">Season {season}</span>
-          <span className="mt-1 flex flex-wrap gap-1">
-            {owned ? (
-              shelfCopies.map((disc) => (
-                <span
-                  key={disc.id}
-                  className={`rounded border px-1.5 py-0.5 text-xs uppercase tracking-[0.08em] ${formatStyle(
-                    disc.format || 'DVD'
-                  )}`}
-                >
-                  {disc.format || 'DVD'}
-                </span>
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground">On your Plex server</span>
-            )}
-          </span>
-        </span>
-        {owned ? (
-          <span className="flex shrink-0 items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-primary">
-            <Check className="h-3.5 w-3.5" />
-            Owned
-          </span>
-        ) : (
-          <span className="flex shrink-0 items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-orange-400">
-            <PlayCircle className="h-3.5 w-3.5" />
-            In Plex
-          </span>
+        className={cn(
+          'overflow-hidden rounded-lg border',
+          owned || inPlex ? 'border-border bg-card' : 'border-dashed border-border/70 opacity-60'
         )}
-      </button>
+      >
+        <button
+          type="button"
+          onClick={() => setOpenSeason(open ? null : season)}
+          aria-expanded={open}
+          className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-accent/40"
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-foreground">Season {season}</span>
+            <span className="mt-1 flex flex-wrap gap-1">
+              {owned ? (
+                shelfCopies.map((disc) => (
+                  <span
+                    key={disc.id}
+                    className={`rounded border px-1.5 py-0.5 text-xs uppercase tracking-[0.08em] ${formatStyle(
+                      disc.format || 'DVD'
+                    )}`}
+                  >
+                    {disc.format || 'DVD'}
+                  </span>
+                ))
+              ) : inPlex ? (
+                <span className="text-xs text-muted-foreground">On your Plex server</span>
+              ) : (
+                <span className="text-xs text-muted-foreground">Not in your collection</span>
+              )}
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-2">
+            {owned ? (
+              <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-primary">
+                <Check className="h-3.5 w-3.5" />
+                Owned
+              </span>
+            ) : inPlex ? (
+              <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-orange-400">
+                <PlayCircle className="h-3.5 w-3.5" />
+                In Plex
+              </span>
+            ) : (
+              <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                Not owned
+              </span>
+            )}
+            <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
+          </span>
+        </button>
+
+        {open ? (
+          <SeasonDetails
+            title={title}
+            season={season}
+            copies={shelfCopies}
+            config={config}
+            plexKey={plexKey}
+            onOpenCopy={onSelect}
+            onPlex={onPlex}
+          />
+        ) : null}
+      </div>
     );
   };
 

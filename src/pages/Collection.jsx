@@ -359,6 +359,7 @@ export default function Collection() {
         disc={selected}
         editMetadata={searchParams.get('edit') === 'meta'}
         show={showContext}
+        config={config}
         onSelectSeason={(disc) => openDisc(disc)}
         onPlex={openInPlex}
         onClose={closeDisc}
