@@ -19,6 +19,7 @@ import { loadConfig } from '@/lib/appSettings';
 import { cn } from '@/lib/utils';
 import { subscribeDiscs } from '@/lib/discEvents';
 import { groupDiscs } from '@/lib/groupDiscs';
+import { combineDuplicates } from '@/lib/duplicates';
 import { loadWatchStatus } from '@/lib/watchStatus';
 import { useTabReselect } from '@/lib/tabReset';
 
@@ -52,14 +53,16 @@ export default function Collection() {
 
   const refresh = async () => {
     const [discList, cfg] = await Promise.all([base44.entities.Disc.list(), loadConfig()]);
-    setDiscs(discList);
+    // Duplicate copies fold into the entry they belong to.
+    const { discs: shelf } = await combineDuplicates(discList);
+    setDiscs(shelf);
     setConfig(cfg);
-    setWatch(await loadWatchStatus(discList.map((disc) => disc.plex_rating_key)));
+    setWatch(await loadWatchStatus(shelf.map((disc) => disc.plex_rating_key)));
 
     if (cfg?.plex_url) {
       const total = await base44.entities.PlexMovie.count({});
       setPlexTotal(total);
-      const owned = discList
+      const owned = shelf
         .map((disc) => disc.plex_rating_key)
         .filter(Boolean)
         .slice(0, 200);

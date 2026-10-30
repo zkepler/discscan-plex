@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { CameraOff, X } from 'lucide-react';
 import BarcodeScanner from '@/components/scan/BarcodeScanner';
 import BulkScanLog from '@/components/scan/BulkScanLog';
 import { Button } from '@/components/ui/button';
 import { findPlexMatch } from '@/lib/matching';
+import { existingCopy } from '@/lib/duplicates';
 import { emitDisc } from '@/lib/discEvents';
 import { stopAllCameraStreams } from '@/lib/cameraStreams';
 import { playScanChime } from '@/lib/chime';
@@ -24,6 +25,16 @@ export default function BulkScanner() {
   const queueRef = useRef([]);
   const workingRef = useRef(false);
   const seenRef = useRef(new Map());
+  const shelfRef = useRef([]);
+
+  // The shelf is known up front, so a copy already owned is never added twice.
+  useEffect(() => {
+    base44.entities.Disc.list()
+      .then((list) => {
+        shelfRef.current = list;
+      })
+      .catch(() => {});
+  }, []);
 
   const patch = (id, changes) =>
     setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...changes } : row)));
@@ -46,6 +57,14 @@ export default function BulkScanner() {
     const format = FORMATS.includes(data.format) ? data.format : 'DVD';
     const year = data.year ? Number(data.year) : null;
     const cover = data.image || data.details?.poster || '';
+
+    // The same film in the same format folds into the copy already on the shelf.
+    const copy = existingCopy(shelfRef.current, { title: data.title, year, format });
+    if (copy) {
+      patch(id, { title: copy.title, year: copy.year, format: copy.format, cover_url: copy.cover_url, status: 'duplicate' });
+      return;
+    }
+
     const match = await findPlexMatch(data.title, year, format);
 
     const disc = await base44.entities.Disc.create({
@@ -58,6 +77,7 @@ export default function BulkScanner() {
       plex_title: match?.title || null,
     });
 
+    shelfRef.current = [...shelfRef.current, disc];
     emitDisc({ type: 'create', disc });
     patch(id, { title: data.title, year, format, cover_url: cover, status: 'saved' });
     navigator.vibrate?.(45);

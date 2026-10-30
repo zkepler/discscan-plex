@@ -9,6 +9,7 @@ import { emitDisc } from '@/lib/discEvents';
 import { pullPostersForDiscs } from '@/lib/plexPosters';
 import { FORMATS } from '@/lib/constants';
 import { addFormatCopies } from '@/lib/discCopies';
+import { filmCopies } from '@/lib/duplicates';
 import FormatPicker from '@/components/collection/FormatPicker';
 import MovieDetailsCard from '@/components/scan/MovieDetailsCard';
 import { Check } from 'lucide-react';
@@ -21,6 +22,8 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
     formats: [FORMATS.includes(capture.format) ? capture.format : 'DVD'],
     location: '',
   });
+
+  const [saving, setSaving] = useState(false);
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -37,62 +40,80 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
     }));
   }, [capture.details]);
 
-  function save() {
+  async function save() {
+    if (saving) return;
     const title = form.title.trim();
     if (!title) return;
 
-    const formats = form.formats.length ? form.formats : ['DVD'];
+    const year = form.year ? Number(form.year) : null;
+    const picked = form.formats.length ? form.formats : ['DVD'];
+    let draft = null;
 
-    const draft = {
-      id: `draft-${Date.now()}`,
-      title,
-      upc: capture.upc,
-      year: form.year ? Number(form.year) : null,
-      format: formats[0],
-      location: form.location.trim(),
-      cover_url: poster,
-      plex_rating_key: null,
-      plex_title: null,
-    };
+    setSaving(true);
 
-    emitDisc({ type: 'create', disc: draft });
-    toast({ title: 'Added to your shelf', description: title });
-    onDone();
+    try {
+      // A copy of a film already on the shelf joins that entry instead of making a second one.
+      const shelf = await base44.entities.Disc.list();
+      const owned = filmCopies(shelf, { title, year }).map((disc) => disc.format);
+      const formats = picked.filter((format) => !owned.includes(format));
 
-    (async () => {
-      try {
-        const match = await findPlexMatch(title, form.year, form.format);
-        const created = await base44.entities.Disc.create({
-          title,
-          upc: draft.upc,
-          year: draft.year,
-          format: draft.format,
-          location: draft.location,
-          cover_url: draft.cover_url,
-          plex_rating_key: match?.rating_key || null,
-          plex_title: match?.title || null,
+      if (!formats.length) {
+        toast({
+          title: 'Already on your shelf',
+          description: `${title} · ${owned.join(', ')}`,
         });
-        emitDisc({ type: 'replace', id: draft.id, disc: created });
-
-        const extra = formats.length > 1
-          ? await addFormatCopies(
-              {
-                ...draft,
-                plex_rating_key: match?.rating_key || null,
-                plex_title: match?.title || null,
-              },
-              formats.slice(1)
-            )
-          : [];
-
-        if (match && !draft.cover_url) {
-          pullPostersForDiscs([created.id, ...extra.map((disc) => disc.id)]).catch(() => {});
-        }
-      } catch (error) {
-        emitDisc({ type: 'remove', id: draft.id });
-        toast({ variant: 'destructive', title: 'Could not save that disc', description: error.message });
+        return;
       }
-    })();
+
+      draft = {
+        id: `draft-${Date.now()}`,
+        title,
+        upc: capture.upc,
+        year,
+        format: formats[0],
+        location: form.location.trim(),
+        cover_url: poster,
+        plex_rating_key: null,
+        plex_title: null,
+      };
+
+      emitDisc({ type: 'create', disc: draft });
+      toast({ title: 'Added to your shelf', description: title });
+      onDone();
+
+      const match = await findPlexMatch(title, year, formats[0]);
+      const created = await base44.entities.Disc.create({
+        title,
+        upc: draft.upc,
+        year: draft.year,
+        format: draft.format,
+        location: draft.location,
+        cover_url: draft.cover_url,
+        plex_rating_key: match?.rating_key || null,
+        plex_title: match?.title || null,
+      });
+      emitDisc({ type: 'replace', id: draft.id, disc: created });
+
+      const extra = formats.length > 1
+        ? await addFormatCopies(
+            {
+              ...draft,
+              plex_rating_key: match?.rating_key || null,
+              plex_title: match?.title || null,
+            },
+            formats.slice(1)
+          )
+        : [];
+
+      if (match && !draft.cover_url) {
+        pullPostersForDiscs([created.id, ...extra.map((disc) => disc.id)]).catch(() => {});
+      }
+    } catch (error) {
+      if (draft) emitDisc({ type: 'remove', id: draft.id });
+      toast({ variant: 'destructive', title: 'Could not save that disc', description: error.message });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -160,7 +181,7 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
           <Button variant="ghost" onClick={onCancel}>
             Scan another
           </Button>
-          <Button onClick={save} disabled={!form.title.trim()}>
+          <Button onClick={save} disabled={!form.title.trim() || saving}>
             <Check className="mr-2 h-4 w-4" />
             Add to shelf
           </Button>

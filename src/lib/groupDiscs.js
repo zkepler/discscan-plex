@@ -14,7 +14,7 @@ export const baseTitle = (title) =>
 
 // Copies matched to the same Plex title are the same film, whatever their titles say.
 // Otherwise two copies that disagree only by a year (or when one has no year) still link.
-const sameFilm = (group, disc) => {
+export const sameFilm = (group, disc) => {
   if (group.plexKey && disc.plex_rating_key) return group.plexKey === disc.plex_rating_key;
   if (group.base !== baseTitle(disc.title)) return false;
   if (!group.year || !disc.year) return true;
