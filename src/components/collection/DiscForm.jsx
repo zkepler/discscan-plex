@@ -8,6 +8,7 @@ import FormatPicker from '@/components/collection/FormatPicker';
 import PosterLightbox from '@/components/collection/PosterLightbox';
 import MetadataFields from '@/components/collection/MetadataFields';
 import MetadataImport from '@/components/collection/MetadataImport';
+import PlexMetadataPull from '@/components/collection/PlexMetadataPull';
 
 export default function DiscForm({ disc, form, set, confirming, onSave, onRemove, onClose, onMetadata }) {
   return (
@@ -47,6 +48,13 @@ export default function DiscForm({ disc, form, set, confirming, onSave, onRemove
             Cast, synopsis and release details for this copy.
           </p>
         </div>
+        <PlexMetadataPull
+          title={form.title}
+          year={form.year}
+          format={form.formats[0]}
+          ratingKey={form.plex_rating_key}
+          onMetadata={onMetadata}
+        />
         <MetadataImport
           onImport={(patch) => onMetadata(patch)}
           onCover={(url) => set('cover_url', url)}
