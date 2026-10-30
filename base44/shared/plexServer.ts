@@ -446,14 +446,14 @@ function wantsSection(kind: string, wanted: Set<string> | null): boolean {
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 40;
 
-async function sectionItems(baseUrl: string, token: string, key: string): Promise<any[]> {
+async function sectionItems(baseUrl: string, token: string, key: string, type?: number): Promise<any[]> {
   const items: any[] = [];
   let start = 0;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const data = await plexJson(
       baseUrl,
       token,
-      `/library/sections/${key}/all?X-Plex-Container-Start=${start}&X-Plex-Container-Size=${PAGE_SIZE}`
+      `/library/sections/${key}/all?${type ? `type=${type}&` : ''}X-Plex-Container-Start=${start}&X-Plex-Container-Size=${PAGE_SIZE}`
     );
     const container = data?.MediaContainer;
     const batch = container?.Metadata || [];
@@ -463,6 +463,20 @@ async function sectionItems(baseUrl: string, token: string, key: string): Promis
     if (!batch.length || !total || start >= total) break;
   }
   return items;
+}
+
+// Specials (season 0) are not a season of the show, so the count comes from the
+// numbered seasons the server actually holds: show key -> highest season number.
+async function regularSeasons(baseUrl: string, token: string, key: string) {
+  const counts = new Map<string, number>();
+  const items = await sectionItems(baseUrl, token, key, 3);
+  items.forEach((item: any) => {
+    const show = String(item.parentRatingKey ?? '');
+    const season = Number(item.index ?? 0);
+    if (!show || !Number.isFinite(season) || season < 1) return;
+    counts.set(show, Math.max(counts.get(show) || 0, season));
+  });
+  return counts;
 }
 
 export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: string[]) {
@@ -483,6 +497,8 @@ export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: st
   const byKey = new Map<string, any>();
   for (const section of sections) {
     const items = await sectionItems(baseUrl, token, section.key);
+    // A show section's own season list, so specials never inflate the season count.
+    const seasonCounts = section.kind === 'show' ? await regularSeasons(baseUrl, token, section.key) : null;
     items.forEach((item: any) => {
       if (!item?.ratingKey) return;
       const resolution = item.Media?.[0]?.videoResolution || null;
@@ -499,7 +515,12 @@ export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: st
         duration_ms: item.duration ? Number(item.duration) : null,
         added_at: item.addedAt ? Number(item.addedAt) : null,
         progress_pct: progressFor(kind, item),
-        season_count: kind === 'show' ? Number(item.childCount || 0) || null : null,
+        season_count:
+          kind === 'show'
+            ? seasonCounts?.size
+              ? seasonCounts.get(String(item.ratingKey)) || null
+              : Number(item.childCount || 0) || null
+            : null,
         last_viewed_at: item.lastViewedAt ? Number(item.lastViewedAt) * 1000 : null,
         view_count: Number(item.viewCount || 0),
       });

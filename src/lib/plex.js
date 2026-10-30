@@ -57,6 +57,22 @@ function wantsSection(kind, wanted) {
   return wanted.has('movie') || wanted.has('4k');
 }
 
+// Specials (season 0) are not a season of the show, so the count comes from the
+// numbered seasons the server actually holds: show key -> highest season number.
+async function regularSeasons(config, sectionKey) {
+  const data = await getJson(
+    plexUrl(config.plex_url, config.plex_token, `/library/sections/${sectionKey}/all?type=3`)
+  );
+  const counts = new Map();
+  (data?.MediaContainer?.Metadata || []).forEach((item) => {
+    const show = String(item.parentRatingKey ?? '');
+    const season = Number(item.index ?? 0);
+    if (!show || !Number.isFinite(season) || season < 1) return;
+    counts.set(show, Math.max(counts.get(show) || 0, season));
+  });
+  return counts;
+}
+
 // Used when the server can only be reached from this device (home network, Remote Access off).
 export async function fetchLibraryMoviesInBrowser(config, onProgress, kinds) {
   const wanted = kinds?.length ? new Set(kinds) : null;
@@ -71,6 +87,8 @@ export async function fetchLibraryMoviesInBrowser(config, onProgress, kinds) {
       plexUrl(config.plex_url, config.plex_token, `/library/sections/${section.key}/all`)
     );
     const items = data?.MediaContainer?.Metadata || [];
+    // A show section's own season list, so specials never inflate the season count.
+    const seasonCounts = section.kind === 'show' ? await regularSeasons(config, section.key) : null;
     items.forEach((item) => {
       if (!item.ratingKey) return;
       const resolution = item.Media?.[0]?.videoResolution || null;
@@ -91,7 +109,12 @@ export async function fetchLibraryMoviesInBrowser(config, onProgress, kinds) {
           : (item.duration && item.viewOffset
               ? Math.min(100, Math.round((Number(item.viewOffset) / Number(item.duration)) * 100))
               : 0),
-        season_count: kind === 'show' ? Number(item.childCount || 0) || null : null,
+        season_count:
+          kind === 'show'
+            ? seasonCounts?.size
+              ? seasonCounts.get(String(item.ratingKey)) || null
+              : Number(item.childCount || 0) || null
+            : null,
         last_viewed_at: item.lastViewedAt ? Number(item.lastViewedAt) * 1000 : null,
         view_count: Number(item.viewCount || 0),
       });
