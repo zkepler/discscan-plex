@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,6 @@ import { Download, ScanLine, Search } from 'lucide-react';
 import StatsRow from '@/components/collection/StatsRow';
 import DiscCard from '@/components/collection/DiscCard';
 import DiscDialog from '@/components/collection/DiscDialog';
-import ShowSeasonsDialog from '@/components/collection/ShowSeasonsDialog';
 import AddFormatDialog from '@/components/collection/AddFormatDialog';
 import PlexPreview from '@/components/collection/PlexPreview';
 import ShareDialog from '@/components/collection/ShareDialog';
@@ -21,7 +20,7 @@ import { loadConfig } from '@/lib/appSettings';
 import { cn } from '@/lib/utils';
 import { subscribeDiscs } from '@/lib/discEvents';
 import { subscribeSync } from '@/lib/syncEvents';
-import { groupDiscs } from '@/lib/groupDiscs';
+import { groupDiscs, seasonNumber, showBase } from '@/lib/groupDiscs';
 import { combineDuplicates } from '@/lib/duplicates';
 import { loadWatchStatus } from '@/lib/watchStatus';
 import { useTabReselect } from '@/lib/tabReset';
@@ -49,7 +48,8 @@ export default function Collection() {
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sharing, setSharing] = useState(false);
   const [addingFormats, setAddingFormats] = useState(null);
-  const [showDetails, setShowDetails] = useState(null);
+  const [showAnchor, setShowAnchor] = useState(null);
+  const navigate = useNavigate();
 
   useTabReselect('/', () => {
     setQuery('');
@@ -145,6 +145,7 @@ export default function Collection() {
   };
 
   const closeDisc = () => {
+    setShowAnchor(null);
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -154,6 +155,39 @@ export default function Collection() {
       },
       { replace: true }
     );
+  };
+
+  // A show opens its disc details with every season listed underneath.
+  const openShow = ({ title, discs: copies, seasonCount }) => {
+    const numbered = copies
+      .filter((disc) => seasonNumber(disc.title) !== null)
+      .sort((a, b) => seasonNumber(a.title) - seasonNumber(b.title));
+    const first = numbered[0] || copies[0];
+    setShowAnchor({
+      key: numbered.length ? showBase(first.title) : '',
+      title,
+      seasonCount,
+      copies,
+    });
+    openDisc(first);
+  };
+
+  const showContext = useMemo(() => {
+    if (!showAnchor) return null;
+    const live = showAnchor.key
+      ? groupDiscs(discs).find((group) => group.show === showAnchor.key)
+      : null;
+    const copies = live ? live.discs : showAnchor.copies;
+    return {
+      title: (live && live.showTitle) || showAnchor.title,
+      seasonCount: showAnchor.seasonCount,
+      discs: copies,
+    };
+  }, [showAnchor, discs]);
+
+  const openInPlex = (title) => {
+    closeDisc();
+    navigate(`/plex?q=${encodeURIComponent(title)}`);
   };
 
   const filtered = useMemo(() => {
@@ -300,7 +334,7 @@ export default function Collection() {
                 watch={watch}
                 seasons={seasons}
                 onSelect={openDisc}
-                onOpenShow={setShowDetails}
+                onOpenShow={openShow}
                 onAddFormat={setAddingFormats}
                 onEditMeta={(disc) => openDisc(disc, true)}
               />
@@ -318,18 +352,12 @@ export default function Collection() {
 
       {!loading ? <PlexPreview items={plexOnly} config={config} plexTotal={plexTotal} /> : null}
 
-      <ShowSeasonsDialog
-        show={showDetails}
-        onClose={() => setShowDetails(null)}
-        onSelect={(disc) => {
-          setShowDetails(null);
-          openDisc(disc);
-        }}
-      />
-
       <DiscDialog
         disc={selected}
         editMetadata={searchParams.get('edit') === 'meta'}
+        show={showContext}
+        onSelectSeason={(disc) => openDisc(disc)}
+        onPlex={openInPlex}
         onClose={closeDisc}
         onChange={refresh}
       />

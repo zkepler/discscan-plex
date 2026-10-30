@@ -9,8 +9,17 @@ import { pullPostersForDiscs } from '@/lib/plexPosters';
 import { addFormatCopies } from '@/lib/discCopies';
 import { splitList, joinList } from '@/lib/discMetadata';
 import DiscForm from '@/components/collection/DiscForm';
+import ShowSeasons from '@/components/collection/ShowSeasons';
 
-export default function DiscDialog({ disc, editMetadata, onClose, onChange }) {
+export default function DiscDialog({
+  disc,
+  editMetadata,
+  show,
+  onClose,
+  onChange,
+  onSelectSeason,
+  onPlex,
+}) {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [form, setForm] = useState(null);
@@ -122,17 +131,28 @@ export default function DiscDialog({ disc, editMetadata, onClose, onChange }) {
   }
 
   const body = (
-    <DiscForm
-      disc={shown}
-      form={form}
-      set={set}
-      confirming={confirming}
-      onSave={save}
-      onRemove={() => (confirming ? remove() : setConfirming(true))}
-      onClose={onClose}
-      onMetadata={applyMetadata}
-      startEditingMeta={editMetadata}
-    />
+    <div className="space-y-5">
+      <DiscForm
+        disc={shown}
+        form={form}
+        set={set}
+        confirming={confirming}
+        onSave={save}
+        onRemove={() => (confirming ? remove() : setConfirming(true))}
+        onClose={onClose}
+        onMetadata={applyMetadata}
+        startEditingMeta={editMetadata}
+      />
+      {show ? (
+        <ShowSeasons
+          title={show.title}
+          seasonCount={show.seasonCount}
+          discs={show.discs}
+          onSelect={(seasonDisc) => onSelectSeason?.(seasonDisc)}
+          onPlex={onPlex}
+        />
+      ) : null}
+    </div>
   );
 
   if (isMobile) {
@@ -140,7 +160,9 @@ export default function DiscDialog({ disc, editMetadata, onClose, onChange }) {
       <Drawer open={!!disc} onOpenChange={(open) => (!open ? onClose() : null)}>
         <DrawerContent className="max-h-[92dvh] rounded-t-2xl border-x-0 border-b-0 border-border bg-card pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <div className="min-h-0 overflow-y-auto px-5 pb-2">
-            <DrawerTitle className="pt-1 font-display text-2xl font-normal">Disc details</DrawerTitle>
+            <DrawerTitle className="pt-1 font-display text-2xl font-normal">
+              {show?.title || 'Disc details'}
+            </DrawerTitle>
             <div className="mt-4">{body}</div>
           </div>
         </DrawerContent>
@@ -152,7 +174,9 @@ export default function DiscDialog({ disc, editMetadata, onClose, onChange }) {
     <Dialog open={!!disc} onOpenChange={(open) => (!open ? onClose() : null)}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display text-2xl font-normal">Disc details</DialogTitle>
+          <DialogTitle className="font-display text-2xl font-normal">
+            {show?.title || 'Disc details'}
+          </DialogTitle>
         </DialogHeader>
         {body}
       </DialogContent>

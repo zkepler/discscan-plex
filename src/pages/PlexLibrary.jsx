@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +64,15 @@ export default function PlexLibrary() {
   const [progress, setProgress] = useState('');
 
   const labelFor = (value) => KIND_FILTERS.find((option) => option.value === value)?.label || 'Everything';
+
+  // A show's seasons link here with ?q=, so a search arriving from another tab applies.
+  const { search } = useLocation();
+  useEffect(() => {
+    const term = new URLSearchParams(search).get('q');
+    if (term === null) return;
+    setQuery(term);
+    setDebounced(term.trim().toLowerCase());
+  }, [search]);
 
   useTabReselect('/plex', () => {
     setQuery('');
