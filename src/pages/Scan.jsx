@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import TitleSearch from '@/components/scan/TitleSearch';
 import { Layers, Loader2, ScanLine, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTabReselect } from '@/lib/tabReset';
+import { useTabActive } from '@/lib/tabActive';
 
 const MODES = [
   { id: 'scan', label: 'Scan', icon: ScanLine },
@@ -119,6 +120,15 @@ export default function Scan() {
   };
 
   useTabReselect('/scan', reset);
+
+  const tabActive = useTabActive();
+
+  // Leaving the scanner returns it to its default settings.
+  useEffect(() => {
+    if (tabActive) return;
+    reset();
+    setMode('scan');
+  }, [tabActive]);
 
   return (
     <div className="mx-auto max-w-2xl">
