@@ -1,15 +1,16 @@
 import { Link } from 'react-router-dom';
 import { Check, Pencil } from 'lucide-react';
-import { formatBannerStyle } from '@/lib/mediaStyles';
+import { formatBannerStyle, seasonsLabel } from '@/lib/mediaStyles';
 import { watchState } from '@/lib/watchStatus';
 
-export default function DiscCard({ discs = [], watch = {}, onSelect, onAddFormat, onEditMeta }) {
+export default function DiscCard({ discs = [], watch = {}, seasons = {}, onSelect, onAddFormat, onEditMeta }) {
   const primary = discs.find((disc) => disc.cover_url) || discs[0];
   if (!primary) return null;
 
   const viewed = watchState(discs, watch);
 
   const plexDisc = discs.find((disc) => disc.plex_rating_key);
+  const seasonCount = seasons[plexDisc?.plex_rating_key] || null;
   const plexQuery = plexDisc?.plex_title || plexDisc?.title || primary.title || '';
 
   // One bold tag per format this movie is owned in.
@@ -69,7 +70,9 @@ export default function DiscCard({ discs = [], watch = {}, onSelect, onAddFormat
           >
             <p className="line-clamp-2 text-sm font-medium leading-tight text-white">{primary.title}</p>
             <p className="mt-1 text-xs text-white/60">
-              {[primary.year || null, primary.location || null].filter(Boolean).join(' · ')}
+              {[primary.year || null, seasonsLabel(seasonCount), primary.location || null]
+                .filter(Boolean)
+                .join(' · ')}
             </p>
           </button>
         </div>

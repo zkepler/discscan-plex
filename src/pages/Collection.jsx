@@ -36,6 +36,7 @@ const PAGE_SIZE = 48;
 export default function Collection() {
   const [discs, setDiscs] = useState([]);
   const [watch, setWatch] = useState({});
+  const [seasons, setSeasons] = useState({});
   const [config, setConfig] = useState(null);
   const [plexTotal, setPlexTotal] = useState(0);
   const [plexCounts, setPlexCounts] = useState({ movies: 0, shows: 0, fourK: 0 });
@@ -61,6 +62,20 @@ export default function Collection() {
     setDiscs(shelf);
     setConfig(cfg);
     setWatch(await loadWatchStatus(shelf.map((disc) => disc.plex_rating_key)));
+
+    // TV discs carry the season count Plex holds for the show they match.
+    const plexKeys = [...new Set(shelf.map((disc) => disc.plex_rating_key).filter(Boolean))];
+    const seasonMap = {};
+    for (let i = 0; i < plexKeys.length; i += 200) {
+      const page = await base44.entities.PlexMovie.filter(
+        { kind: 'show', rating_key: { $in: plexKeys.slice(i, i + 200) } },
+        { limit: 200 }
+      );
+      (page.items || []).forEach((row) => {
+        if (row.season_count) seasonMap[row.rating_key] = row.season_count;
+      });
+    }
+    setSeasons(seasonMap);
 
     if (cfg?.plex_url) {
       const { rows = [] } = await base44.entities.PlexMovie.aggregate({ query: {}, groupBy: 'kind' });
@@ -281,6 +296,7 @@ export default function Collection() {
                 key={group.key}
                 discs={group.discs}
                 watch={watch}
+                seasons={seasons}
                 onSelect={openDisc}
                 onAddFormat={setAddingFormats}
                 onEditMeta={(disc) => openDisc(disc, true)}
