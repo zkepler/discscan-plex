@@ -8,6 +8,7 @@ import DiscPlexMatch from '@/components/collection/DiscPlexMatch';
 import DiscExternalLinks from '@/components/collection/DiscExternalLinks';
 import FormatPicker from '@/components/collection/FormatPicker';
 import PosterLightbox from '@/components/collection/PosterLightbox';
+import PosterUpload from '@/components/PosterUpload';
 import MetadataSummary from '@/components/collection/MetadataSummary';
 import MetadataFields from '@/components/collection/MetadataFields';
 import MetadataImport from '@/components/collection/MetadataImport';
@@ -33,7 +34,13 @@ export default function DiscForm({
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <PosterLightbox src={form.cover_url || disc.cover_url} title={form.title} />
+        {form.cover_url || disc.cover_url ? (
+          <PosterLightbox src={form.cover_url || disc.cover_url} title={form.title} />
+        ) : (
+          <div className="h-32 w-[86px] shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+            <PosterUpload onUploaded={(url) => set('cover_url', url)} />
+          </div>
+        )}
 
         <div className="flex-1 space-y-3">
           <div className="space-y-1.5">

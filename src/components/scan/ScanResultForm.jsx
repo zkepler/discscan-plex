@@ -13,7 +13,7 @@ import { filmCopies } from '@/lib/duplicates';
 import { normaliseMetadata } from '@/lib/discMetadata';
 import FormatPicker from '@/components/collection/FormatPicker';
 import MovieDetailsCard from '@/components/scan/MovieDetailsCard';
-import PosterUpload from '@/components/scan/PosterUpload';
+import PosterUpload from '@/components/PosterUpload';
 import { Check } from 'lucide-react';
 
 export default function ScanResultForm({ capture, onDone, onCancel }) {
