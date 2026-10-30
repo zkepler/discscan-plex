@@ -75,22 +75,68 @@ function ipv4ToInt(host: string): number | null {
   return value;
 }
 
+function isPublicV4Int(value: number): boolean {
+  return !BLOCKED_V4.some(([low, high]) => value >= low && value <= high);
+}
+
 function isPublicIpv4(host: string): boolean {
   const value = ipv4ToInt(host);
   if (value === null) return false;
-  return !BLOCKED_V4.some(([low, high]) => value >= low && value <= high);
+  return isPublicV4Int(value);
+}
+
+// Expands any IPv6 notation (compressed, or ending in a dotted quad such as
+// ::ffff:10.0.0.1) into eight 16-bit groups. null means it is not valid IPv6,
+// which callers treat as blocked.
+function ipv6Words(raw: string): number[] | null {
+  let text = raw;
+  const dotted = text.match(/(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (dotted) {
+    const v4 = ipv4ToInt(dotted[1]);
+    if (v4 === null) return null;
+    // The dotted quad is rewritten as the two hex groups the URL parser would produce.
+    text = `${text.slice(0, dotted.index)}${Math.floor(v4 / 65536).toString(16)}:${(
+      v4 % 65536
+    ).toString(16)}`;
+  }
+  const halves = text.split('::');
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(':') : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const fill = halves.length === 2 ? 8 - head.length - tail.length : 0;
+  if (halves.length === 2 && fill < 1) return null;
+  const groups = halves.length === 2 ? [...head, ...Array(fill).fill('0'), ...tail] : head;
+  if (groups.length !== 8) return null;
+  const words = groups.map((group) => (/^[0-9a-f]{1,4}$/.test(group) ? parseInt(group, 16) : NaN));
+  return words.some((word) => Number.isNaN(word)) ? null : words;
+}
+
+// These prefixes carry an IPv4 address in the low 32 bits, so the request really
+// reaches that IPv4 host: IPv4-mapped ::ffff:0:0/96, the deprecated compatible
+// ::/96, NAT64 64:ff9b::/32 and 6to4 2002::/16. Each is judged as that address,
+// in hex or dotted notation alike.
+function embeddedIpv4(words: number[]): number | null {
+  const zeros = (count: number) => words.slice(0, count).every((word) => word === 0);
+  const low32 = words[6] * 65536 + words[7];
+  if (zeros(5) && words[5] === 0xffff) return low32;
+  if (zeros(6)) return low32;
+  if (words[0] === 0x64 && words[1] === 0xff9b) return low32;
+  if (words[0] === 0x2002) return words[1] * 65536 + words[2];
+  return null;
 }
 
 function isPublicIpv6(host: string): boolean {
   const ip = host.replace(/^\[|\]$/g, '').toLowerCase();
   if (!ip.includes(':')) return true;
-  if (/^[0:]+$/.test(ip)) return false; // :: and fully expanded zero addresses
-  if (/^[0:]+1$/.test(ip)) return false; // ::1 in any form
-  const mappedV4 = ip.match(/(\d{1,3}(?:\.\d{1,3}){3})$/);
-  if (mappedV4) return isPublicIpv4(mappedV4[1]);
-  if (/^f[cd]/.test(ip)) return false; // unique local
-  if (/^fe[89ab]/.test(ip)) return false; // link local
-  if (/^ff/.test(ip)) return false; // multicast
+  const words = ipv6Words(ip);
+  if (!words) return false; // an unparseable IPv6 literal is refused, never waved through
+  const v4 = embeddedIpv4(words);
+  if (v4 !== null) return isPublicV4Int(v4);
+  if (words[0] === 0) return false; // ::/8: unspecified, loopback and reserved
+  if ((words[0] & 0xfe00) === 0xfc00) return false; // fc00::/7 unique local
+  if ((words[0] & 0xffc0) === 0xfe80) return false; // fe80::/10 link local
+  if ((words[0] & 0xffc0) === 0xfec0) return false; // fec0::/10 site local
+  if ((words[0] & 0xff00) === 0xff00) return false; // ff00::/8 multicast
   return true;
 }
 
@@ -238,17 +284,17 @@ export async function safeFetch(
   const res = await fetch(target.url.toString(), { ...init, redirect: 'manual' });
 
   // fetch() resolves the name a second time, so the pinned answers are checked
-  // again: a host that now points somewhere internal is never trusted.
-  if (!isIpLiteral(normalizeHost(target.url.hostname))) {
-    const after = await resolvePublicHost(target.url.hostname);
-    if (!after || !after.some((address) => target.addresses.includes(address))) {
-      try {
-        await res.body?.cancel();
-      } catch {
-        // body already consumed/closed
-      }
-      throw plexError('That Plex address changed while connecting, which is not supported.', 400);
+  // again: a host that now points somewhere internal is never trusted. IP
+  // literals are re-checked too, so any address the parser accepted once is
+  // still public on the connection that actually happened.
+  const after = await resolvePublicHost(target.url.hostname);
+  if (!after || !after.some((address) => target.addresses.includes(address))) {
+    try {
+      await res.body?.cancel();
+    } catch {
+      // body already consumed/closed
     }
+    throw plexError('That Plex address changed while connecting, which is not supported.', 400);
   }
   if (res.status >= 300 && res.status < 400 && hops < 2) {
     const location = res.headers.get('location');
