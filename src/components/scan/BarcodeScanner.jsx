@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { CameraOff, RotateCw } from 'lucide-react';
+import { CameraOff, FlipHorizontal2, RotateCw } from 'lucide-react';
 import CameraSelect from '@/components/scan/CameraSelect';
 import PhotoScanButton from '@/components/scan/PhotoScanButton';
 import { useTabActive } from '@/lib/tabActive';
@@ -8,6 +8,17 @@ import { useTabActive } from '@/lib/tabActive';
 // Continuity Camera (and other front-facing cameras) hand over a mirrored image.
 const MIRRORED_CAMERA = /iphone|continuity|facetime|front/i;
 const ROTATE_KEY = 'shelfmark-scanner-rotated';
+const MIRROR_KEY = 'shelfmark-scanner-mirrored';
+
+// null means "let the camera label decide".
+const storedMirrorPref = () => {
+  try {
+    const value = localStorage.getItem(MIRROR_KEY);
+    return value === null ? null : value === '1';
+  } catch {
+    return null;
+  }
+};
 // iPads hand over large frames; decoding a downscaled copy keeps scanning snappy.
 const MAX_DECODE_WIDTH = 1280;
 
@@ -27,6 +38,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
   const videoRef = useRef(null);
   const onDetectedRef = useRef(onDetected);
   const pausedRef = useRef(paused);
+  const mirrorOverrideRef = useRef(storedMirrorPref());
   const mirroredRef = useRef(false);
   const rotatedRef = useRef(false);
   const [error, setError] = useState('');
@@ -42,6 +54,19 @@ export default function BarcodeScanner({ onDetected, paused }) {
   });
   const [revision, setRevision] = useState(0);
   const tabActive = useTabActive();
+
+  // Front-facing cameras hand over a flipped image; this reverses it either way.
+  const toggleMirror = () => {
+    const next = !mirroredRef.current;
+    mirroredRef.current = next;
+    mirrorOverrideRef.current = next;
+    setMirrored(next);
+    try {
+      localStorage.setItem(MIRROR_KEY, next ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Some iPhone camera streams (notably in desktop-site mode) arrive upside down.
   const toggleRotation = () => {
@@ -149,7 +174,8 @@ export default function BarcodeScanner({ onDetected, paused }) {
         return;
       }
 
-      const flip = MIRRORED_CAMERA.test(stream.getVideoTracks()[0]?.label || '');
+      const detected = MIRRORED_CAMERA.test(stream.getVideoTracks()[0]?.label || '');
+      const flip = mirrorOverrideRef.current ?? detected;
       mirroredRef.current = flip;
       setMirrored(flip);
 
@@ -214,14 +240,24 @@ export default function BarcodeScanner({ onDetected, paused }) {
             <p className="absolute inset-x-0 bottom-3 text-center text-xs uppercase tracking-[0.2em] text-white/70">
               {ready ? 'Hold the barcode inside the frame' : 'Starting camera…'}
             </p>
-            <button
-              type="button"
-              onClick={toggleRotation}
-              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur"
-            >
-              <RotateCw className="h-3.5 w-3.5" />
-              Rotate
-            </button>
+            <div className="absolute right-3 top-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleMirror}
+                className="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur"
+              >
+                <FlipHorizontal2 className="h-3.5 w-3.5" />
+                Flip
+              </button>
+              <button
+                type="button"
+                onClick={toggleRotation}
+                className="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur"
+              >
+                <RotateCw className="h-3.5 w-3.5" />
+                Rotate
+              </button>
+            </div>
           </>
         )}
       </div>
