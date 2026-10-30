@@ -5,7 +5,12 @@ import { Button } from '@/components/ui/button';
 import CameraSelect from '@/components/scan/CameraSelect';
 import PhotoScanButton from '@/components/scan/PhotoScanButton';
 import { useTabActive } from '@/lib/tabActive';
-import { trackCameraStream } from '@/lib/cameraStreams';
+import {
+  requestCameraStream,
+  shareCameraStream,
+  sharedCameraStream,
+  stopAllCameraStreams,
+} from '@/lib/cameraStreams';
 
 // Continuity Camera (and other front-facing cameras) hand over a mirrored image.
 const MIRRORED_CAMERA = /iphone|continuity|facetime|front/i;
@@ -14,8 +19,7 @@ const MIRROR_KEY = 'shelfmark-scanner-mirrored';
 
 // Stopping the tracks alone leaves Safari holding the camera while the video
 // element still references the stream, so the element is cleared as well.
-const releaseCamera = (element, stream) => {
-  stream?.getTracks().forEach((track) => track.stop());
+const detachVideo = (element) => {
   if (!element) return;
   try {
     element.pause();
@@ -23,6 +27,11 @@ const releaseCamera = (element, stream) => {
     /* ignore */
   }
   if (element.srcObject) element.srcObject = null;
+};
+
+const releaseCamera = (element, stream) => {
+  stream?.getTracks().forEach((track) => track.stop());
+  detachVideo(element);
 };
 
 // null means "let the camera label decide".
@@ -72,12 +81,14 @@ export default function BarcodeScanner({ onDetected, paused }) {
   const liveRef = useRef({ stream: null, video: null });
   const [hidden, setHidden] = useState(() => document.visibilityState === 'hidden');
 
-  // Switching to another tab, or leaving the app, releases the camera at once.
+  // Switching to another tab, leaving the app, or switching the camera off
+  // releases it at once.
   useEffect(() => {
-    if (tabActive && !hidden) return;
+    if (tabActive && cameraOn && !hidden) return;
     releaseCamera(liveRef.current.video, liveRef.current.stream);
     liveRef.current = { stream: null, video: null };
-  }, [tabActive, hidden]);
+    stopAllCameraStreams();
+  }, [tabActive, cameraOn, hidden]);
 
   // Front-facing cameras hand over a flipped image; this reverses it either way.
   const toggleMirror = () => {
@@ -120,6 +131,13 @@ export default function BarcodeScanner({ onDetected, paused }) {
     // Release the camera while another tab is showing, the app is in the
     // background, or the camera is switched off.
     if (!tabActive || !cameraOn || hidden) return undefined;
+
+    // Picking a different camera closes the one that was open before it.
+    if (liveRef.current.stream) {
+      releaseCamera(liveRef.current.video, liveRef.current.stream);
+      liveRef.current = { stream: null, video: null };
+      stopAllCameraStreams();
+    }
 
     let cancelled = false;
     let stream = null;
@@ -164,11 +182,16 @@ export default function BarcodeScanner({ onDetected, paused }) {
         setError('The camera needs a secure (https) connection. Type the barcode below.');
         return;
       }
+      // A camera the app is already using is picked straight back up, so the
+      // browser's permission prompt is only ever shown once.
+      const key = deviceId || 'auto';
+      stream = sharedCameraStream(key);
+
       try {
-        for (const video of cameraAttempts(deviceId)) {
+        for (const video of stream ? [] : cameraAttempts(deviceId)) {
           for (let attempt = 0; attempt < 2; attempt += 1) {
             try {
-              stream = await navigator.mediaDevices.getUserMedia({ video });
+              stream = await requestCameraStream(key, { video });
               break;
             } catch (err) {
               lastError = err;
@@ -198,7 +221,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
         return;
       }
       liveRef.current = { stream, video: videoRef.current };
-      trackCameraStream(stream);
+      shareCameraStream(key, stream);
 
       const detected = MIRRORED_CAMERA.test(stream.getVideoTracks()[0]?.label || '');
       const flip = mirrorOverrideRef.current ?? detected;
@@ -236,8 +259,9 @@ export default function BarcodeScanner({ onDetected, paused }) {
     return () => {
       cancelled = true;
       if (timer) clearInterval(timer);
-      // Leaving the tab (or the page) releases the camera completely.
-      releaseCamera(videoEl || liveRef.current.video || videoRef.current, liveRef.current.stream || stream);
+      // Only the preview is dropped here. The stream stays with the app, so
+      // coming back to the scanner never asks for permission a second time.
+      detachVideo(videoEl || liveRef.current.video || videoRef.current);
       liveRef.current = { stream: null, video: null };
     };
   }, [deviceId, tabActive, cameraOn, hidden]);

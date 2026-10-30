@@ -6,6 +6,7 @@ import BulkScanLog from '@/components/scan/BulkScanLog';
 import { Button } from '@/components/ui/button';
 import { findPlexMatch } from '@/lib/matching';
 import { emitDisc } from '@/lib/discEvents';
+import { stopAllCameraStreams } from '@/lib/cameraStreams';
 import { FORMATS } from '@/lib/constants';
 
 // The camera keeps re-reading a barcode that stays in frame, so a code is only
@@ -96,8 +97,9 @@ export default function BulkScanner() {
   const count = (status) => rows.filter((row) => row.status === status).length;
   const saved = count('saved');
 
-  // Leaving pile mode unmounts the camera, which releases it.
+  // The session ends with the camera switched off.
   const finish = () => {
+    stopAllCameraStreams();
     setFinished(true);
     navigator.vibrate?.(25);
   };
