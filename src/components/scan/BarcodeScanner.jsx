@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { CameraOff, FlipHorizontal2, RotateCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import CameraSelect from '@/components/scan/CameraSelect';
 import PhotoScanButton from '@/components/scan/PhotoScanButton';
 import { useTabActive } from '@/lib/tabActive';
@@ -66,6 +67,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
     }
   });
   const [revision, setRevision] = useState(0);
+  const [cameraOn, setCameraOn] = useState(true);
   const tabActive = useTabActive();
 
   // Front-facing cameras hand over a flipped image; this reverses it either way.
@@ -108,8 +110,8 @@ export default function BarcodeScanner({ onDetected, paused }) {
   rotatedRef.current = rotated;
 
   useEffect(() => {
-    // Release the camera while another tab is showing.
-    if (!tabActive) return undefined;
+    // Release the camera while another tab is showing or the camera is switched off.
+    if (!tabActive || !cameraOn) return undefined;
 
     let cancelled = false;
     let stream = null;
@@ -227,7 +229,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
       // Leaving the tab (or the page) releases the camera completely.
       releaseCamera(videoEl || videoRef.current, stream);
     };
-  }, [deviceId, tabActive, revision]);
+  }, [deviceId, tabActive, cameraOn, revision]);
 
   return (
     <div>
@@ -243,7 +245,26 @@ export default function BarcodeScanner({ onDetected, paused }) {
           playsInline
         />
 
-        {error ? (
+        {cameraOn ? (
+          <button
+            type="button"
+            onClick={() => setCameraOn(false)}
+            aria-label="Turn camera off"
+            className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
+          >
+            <CameraOff className="h-4 w-4" />
+          </button>
+        ) : null}
+
+        {!cameraOn ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card px-8 text-center">
+            <CameraOff className="h-6 w-6 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Camera is off.</p>
+            <Button size="sm" variant="secondary" onClick={() => setCameraOn(true)}>
+              Turn camera on
+            </Button>
+          </div>
+        ) : error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-card px-8 text-center">
             <CameraOff className="h-6 w-6 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">{error}</p>
