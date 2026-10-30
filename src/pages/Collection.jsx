@@ -37,6 +37,7 @@ export default function Collection() {
   const [watch, setWatch] = useState({});
   const [config, setConfig] = useState(null);
   const [plexTotal, setPlexTotal] = useState(0);
+  const [plexCounts, setPlexCounts] = useState({ movies: 0, shows: 0, fourK: 0 });
   const [plexOnly, setPlexOnly] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -61,8 +62,10 @@ export default function Collection() {
     setWatch(await loadWatchStatus(shelf.map((disc) => disc.plex_rating_key)));
 
     if (cfg?.plex_url) {
-      const total = await base44.entities.PlexMovie.count({});
-      setPlexTotal(total);
+      const { rows = [] } = await base44.entities.PlexMovie.aggregate({ query: {}, groupBy: 'kind' });
+      const byKind = rows.reduce((acc, row) => ({ ...acc, [row.kind || 'movie']: row.count || 0 }), {});
+      setPlexCounts({ movies: byKind.movie || 0, shows: byKind.show || 0, fourK: byKind['4k'] || 0 });
+      setPlexTotal(rows.reduce((sum, row) => sum + (row.count || 0), 0));
       const owned = shelf
         .map((disc) => disc.plex_rating_key)
         .filter(Boolean)
@@ -74,6 +77,7 @@ export default function Collection() {
       setPlexOnly(page.items || []);
     } else {
       setPlexTotal(0);
+      setPlexCounts({ movies: 0, shows: 0, fourK: 0 });
       setPlexOnly([]);
     }
 
@@ -200,7 +204,7 @@ export default function Collection() {
           discs={discs.length}
           inPlex={inPlex}
           missing={discs.length - inPlex}
-          plexTotal={plexTotal}
+          plexCounts={plexCounts}
         />
       </div>
 
