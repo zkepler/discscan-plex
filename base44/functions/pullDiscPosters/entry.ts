@@ -1,5 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
-import { listPlexServers, resolveReachable, safeFetch } from '../../shared/plexServer.ts';
+import {
+  assertFetchableUrl,
+  listPlexServers,
+  resolveReachable,
+  safeFetch,
+} from '../../shared/plexServer.ts';
 
 // Each call fills a slice of the shelf; the app keeps calling until nothing is left.
 const LIMIT = 12;
@@ -44,12 +49,19 @@ async function storeImage(base44: any, bytes: ArrayBuffer, type: string, name: s
   return String(uploaded?.file_url || '');
 }
 
+// The URL comes from a catalogue or from the model, so every hop is screened by the
+// shared guard: public http(s) hosts only, DNS verified before and after connecting.
 async function downloadImage(url: string) {
   if (!/^https?:\/\//i.test(String(url || ''))) return null;
-  const res = await fetch(url, {
-    headers: { Accept: 'image/*' },
-    signal: AbortSignal.timeout(30000),
-  });
+  let res: Response;
+  try {
+    res = await safeFetch(url, {
+      headers: { Accept: 'image/*' },
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch {
+    return null;
+  }
   if (!res.ok) return null;
   const type = String(res.headers.get('content-type') || 'image/jpeg');
   if (!type.startsWith('image/')) return null;
@@ -152,7 +164,12 @@ async function webPosterUrl(base44: any, disc: any) {
   });
 
   const poster = String(response?.poster || '').trim();
-  return response?.found && /^https?:\/\//i.test(poster) ? poster : '';
+  if (!response?.found || !/^https?:\/\//i.test(poster)) return '';
+  try {
+    return String(await assertFetchableUrl(poster));
+  } catch {
+    return '';
+  }
 }
 
 export default async function (req: Request): Promise<Response> {
