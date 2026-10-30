@@ -70,7 +70,7 @@ export default function ShareDialog({ open, onOpenChange, discs }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">
             {mode === 'recent' ? 'Share what is new in Plex' : 'Share the collection'}
@@ -81,17 +81,17 @@ export default function ShareDialog({ open, onOpenChange, discs }) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-1 rounded-full border border-border p-1">
+          <div className="grid grid-cols-2 gap-2">
             {MODES.map((option) => (
               <button
                 key={option.id}
                 type="button"
                 onClick={() => setMode(option.id)}
                 className={cn(
-                  'select-none rounded-full px-3 py-1.5 text-xs transition-colors',
+                  'select-none rounded-lg border px-4 py-2.5 text-sm transition-colors',
                   mode === option.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
                 )}
               >
                 {option.label}
@@ -110,7 +110,7 @@ export default function ShareDialog({ open, onOpenChange, discs }) {
                 Nothing has been added to Plex yet — run a sync on the Plex page first.
               </p>
             ) : (
-              <pre className="max-h-52 overflow-auto whitespace-pre rounded-lg border border-border bg-secondary/40 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
+              <pre className="max-h-64 overflow-auto whitespace-pre rounded-lg border border-border bg-secondary/40 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
                 {csv}
               </pre>
             )}
