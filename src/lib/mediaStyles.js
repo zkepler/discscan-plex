@@ -37,3 +37,12 @@ export const seasonsLabel = (count) => {
   if (!seasons) return null;
   return `${seasons} season${seasons === 1 ? '' : 's'}`;
 };
+
+// Which seasons of a show sit on the shelf: "Season 2", "Seasons 1–3", "Seasons 1, 4".
+export const seasonListLabel = (numbers = []) => {
+  if (!numbers.length) return null;
+  const runs = numbers.every((value, index) => index === 0 || value === numbers[index - 1] + 1);
+  const list =
+    runs && numbers.length > 2 ? `${numbers[0]}–${numbers[numbers.length - 1]}` : numbers.join(', ');
+  return `${numbers.length === 1 ? 'Season' : 'Seasons'} ${list}`;
+};

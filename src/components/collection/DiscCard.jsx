@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Check, Pencil } from 'lucide-react';
-import { formatBannerStyle, seasonsLabel } from '@/lib/mediaStyles';
+import { seasonNumber, showName } from '@/lib/groupDiscs';
+import { formatBannerStyle, seasonListLabel, seasonsLabel } from '@/lib/mediaStyles';
 import { watchState } from '@/lib/watchStatus';
 
 export default function DiscCard({ discs = [], watch = {}, seasons = {}, onSelect, onAddFormat, onEditMeta }) {
@@ -12,6 +13,14 @@ export default function DiscCard({ discs = [], watch = {}, seasons = {}, onSelec
   const plexDisc = discs.find((disc) => disc.plex_rating_key);
   const seasonCount = seasons[plexDisc?.plex_rating_key] || null;
   const plexQuery = plexDisc?.plex_title || plexDisc?.title || primary.title || '';
+
+  // Seasons of one show stack onto a single card, filed under the show's name.
+  const seasonDisc = discs.find((disc) => seasonNumber(disc.title) !== null);
+  const ownedSeasons = [
+    ...new Set(discs.map((disc) => seasonNumber(disc.title)).filter((value) => value !== null)),
+  ].sort((a, b) => a - b);
+  const heading = seasonDisc ? showName(seasonDisc.title) : primary.title;
+  const year = seasonDisc?.year || primary.year;
 
   // One bold tag per format this movie is owned in.
   const formatEntries = [];
@@ -68,9 +77,13 @@ export default function DiscCard({ discs = [], watch = {}, seasons = {}, onSelec
             onClick={() => onSelect(primary)}
             className="pointer-events-auto block w-full text-left"
           >
-            <p className="line-clamp-2 text-sm font-medium leading-tight text-white">{primary.title}</p>
+            <p className="line-clamp-2 text-sm font-medium leading-tight text-white">{heading}</p>
             <p className="mt-1 text-xs text-white/60">
-              {[primary.year || null, seasonsLabel(seasonCount), primary.location || null]
+              {[
+                year || null,
+                ownedSeasons.length ? seasonListLabel(ownedSeasons) : seasonsLabel(seasonCount),
+                primary.location || null,
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </p>

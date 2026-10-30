@@ -1,6 +1,6 @@
 import { base44 } from '@/api/base44Client';
 import { emitDisc } from '@/lib/discEvents';
-import { baseTitle, groupDiscs, sameFilm } from '@/lib/groupDiscs';
+import { baseTitle, groupDiscs, sameFilm, seasonNumber } from '@/lib/groupDiscs';
 
 const normalizeFormat = (format) => String(format || 'DVD').trim().toLowerCase();
 export const sameFormat = (a, b) => normalizeFormat(a) === normalizeFormat(b);
@@ -32,7 +32,8 @@ export function mergeDuplicates(discs) {
   groupDiscs(discs || []).forEach((group) => {
     const buckets = new Map();
     group.discs.forEach((disc) => {
-      const key = normalizeFormat(disc.format);
+      // Seasons of one show are separate releases, never copies of each other.
+      const key = `${normalizeFormat(disc.format)}|${seasonNumber(disc.title) ?? ''}`;
       buckets.set(key, [...(buckets.get(key) || []), disc]);
     });
 
