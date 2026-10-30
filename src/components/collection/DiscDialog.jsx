@@ -10,7 +10,7 @@ import { addFormatCopies } from '@/lib/discCopies';
 import { splitList, joinList } from '@/lib/discMetadata';
 import DiscForm from '@/components/collection/DiscForm';
 
-export default function DiscDialog({ disc, onClose, onChange }) {
+export default function DiscDialog({ disc, editMetadata, onClose, onChange }) {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [form, setForm] = useState(null);
@@ -131,6 +131,7 @@ export default function DiscDialog({ disc, onClose, onChange }) {
       onRemove={() => (confirming ? remove() : setConfirming(true))}
       onClose={onClose}
       onMetadata={applyMetadata}
+      startEditingMeta={editMetadata}
     />
   );
 

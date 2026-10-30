@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, Pencil } from 'lucide-react';
 import { formatBannerStyle } from '@/lib/mediaStyles';
 import { watchState } from '@/lib/watchStatus';
 
-export default function DiscCard({ discs = [], watch = {}, onSelect, onAddFormat }) {
+export default function DiscCard({ discs = [], watch = {}, onSelect, onAddFormat, onEditMeta }) {
   const primary = discs.find((disc) => disc.cover_url) || discs[0];
   if (!primary) return null;
 
@@ -105,13 +105,24 @@ export default function DiscCard({ discs = [], watch = {}, onSelect, onAddFormat
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={() => onAddFormat?.(discs)}
-        className="mt-2 block w-full rounded-md border border-dashed border-border px-2 py-1 text-center text-xs uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-      >
-        + Format
-      </button>
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => onAddFormat?.(discs)}
+          className="flex-1 rounded-md border border-dashed border-border px-2 py-1 text-center text-xs uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          + Format
+        </button>
+        <button
+          type="button"
+          onClick={() => onEditMeta?.(primary)}
+          aria-label={`Edit details for ${primary.title}`}
+          title="Edit details"
+          className="rounded-md border border-dashed border-border px-2 py-1 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+      </div>
     </div>
   );
 }

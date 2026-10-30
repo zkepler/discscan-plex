@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,8 +13,22 @@ import MetadataFields from '@/components/collection/MetadataFields';
 import MetadataImport from '@/components/collection/MetadataImport';
 import PlexMetadataPull from '@/components/collection/PlexMetadataPull';
 
-export default function DiscForm({ disc, form, set, confirming, onSave, onRemove, onClose, onMetadata }) {
-  const [editingMeta, setEditingMeta] = useState(false);
+export default function DiscForm({
+  disc,
+  form,
+  set,
+  confirming,
+  onSave,
+  onRemove,
+  onClose,
+  onMetadata,
+  startEditingMeta,
+}) {
+  const [editingMeta, setEditingMeta] = useState(!!startEditingMeta);
+
+  useEffect(() => {
+    setEditingMeta(!!startEditingMeta);
+  }, [startEditingMeta, disc.id]);
 
   return (
     <div className="space-y-4">

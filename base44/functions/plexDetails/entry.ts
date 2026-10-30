@@ -1,12 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.54';
 import { safeFetch } from '../../shared/plexServer.ts';
-
-function tags(list: any, max = 20): string[] {
-  return (Array.isArray(list) ? list : [])
-    .map((entry: any) => String(entry?.tag || '').trim())
-    .filter(Boolean)
-    .slice(0, max);
-}
+import { metadataFromPlex } from '../../shared/plexMetadata.ts';
 
 export default async function (req: Request): Promise<Response> {
   try {
@@ -47,23 +41,7 @@ export default async function (req: Request): Promise<Response> {
     const item = data?.MediaContainer?.Metadata?.[0];
     if (!item) return Response.json({ found: false });
 
-    const runtime = Number(item.duration || 0);
-
-    return Response.json({
-      found: true,
-      metadata: {
-        title: item.title || '',
-        year: item.year ? Number(item.year) : undefined,
-        directors: tags(item.Director),
-        studio: item.studio || '',
-        runtime_minutes: runtime ? Math.round(runtime / 60000) : undefined,
-        genres: tags(item.Genre),
-        rating: item.contentRating || '',
-        cast: tags(item.Role),
-        plot: item.summary || '',
-        edition: item.editionTitle || item.edition || '',
-      },
-    });
+    return Response.json({ found: true, metadata: metadataFromPlex(item) });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: error.status || 500 });
   }

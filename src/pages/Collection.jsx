@@ -13,6 +13,7 @@ import PlexPreview from '@/components/collection/PlexPreview';
 import ShareDialog from '@/components/collection/ShareDialog';
 import FixTitlesButton from '@/components/collection/FixTitlesButton';
 import PullPostersButton from '@/components/collection/PullPostersButton';
+import PullMetadataButton from '@/components/collection/PullMetadataButton';
 import PullIndicator from '@/components/PullIndicator';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { loadConfig } from '@/lib/appSettings';
@@ -108,10 +109,12 @@ export default function Collection() {
     [discs, searchParams]
   );
 
-  const openDisc = (disc) => {
+  const openDisc = (disc, editMeta = false) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set('disc', disc.id);
+      if (editMeta) next.set('edit', 'meta');
+      else next.delete('edit');
       return next;
     });
   };
@@ -121,6 +124,7 @@ export default function Collection() {
       (prev) => {
         const next = new URLSearchParams(prev);
         next.delete('disc');
+        next.delete('edit');
         return next;
       },
       { replace: true }
@@ -165,6 +169,11 @@ export default function Collection() {
             disabled={loading || discs.length === 0}
           />
           <PullPostersButton
+            config={config}
+            onDone={refresh}
+            disabled={loading || discs.length === 0}
+          />
+          <PullMetadataButton
             config={config}
             onDone={refresh}
             disabled={loading || discs.length === 0}
@@ -266,6 +275,7 @@ export default function Collection() {
                 watch={watch}
                 onSelect={openDisc}
                 onAddFormat={setAddingFormats}
+                onEditMeta={(disc) => openDisc(disc, true)}
               />
             ))}
           </div>
@@ -281,7 +291,12 @@ export default function Collection() {
 
       {!loading ? <PlexPreview items={plexOnly} config={config} plexTotal={plexTotal} /> : null}
 
-      <DiscDialog disc={selected} onClose={closeDisc} onChange={refresh} />
+      <DiscDialog
+        disc={selected}
+        editMetadata={searchParams.get('edit') === 'meta'}
+        onClose={closeDisc}
+        onChange={refresh}
+      />
 
       {addingFormats ? (
         <AddFormatDialog
