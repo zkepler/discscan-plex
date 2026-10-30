@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { History as HistoryIcon, Library, ScanLine, Tv, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { reselectTab } from '@/lib/tabReset';
+import SyncButton from '@/components/SyncButton';
 
 const NAV = [
   { to: '/', label: 'Collection', icon: Library },
@@ -25,7 +26,7 @@ export default function AppLayout() {
   return (
     <div className="app-surface screen-min">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-5">
           <NavLink to="/" className="flex items-baseline gap-3" onClick={(event) => handleTabClick(event, '/')}>
             <span className="font-display text-2xl leading-none tracking-tight text-foreground">Shelfmark</span>
             <span className="hidden text-xs uppercase tracking-[0.28em] text-muted-foreground sm:block">
@@ -33,7 +34,7 @@ export default function AppLayout() {
             </span>
           </NavLink>
 
-          <nav className="hidden items-center gap-1 sm:flex">
+          <nav className="ml-auto hidden items-center gap-1 sm:flex">
             {NAV.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
@@ -54,6 +55,8 @@ export default function AppLayout() {
               </NavLink>
             ))}
           </nav>
+
+          <SyncButton />
         </div>
       </header>
 

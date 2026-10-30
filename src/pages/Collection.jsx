@@ -19,6 +19,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { loadConfig } from '@/lib/appSettings';
 import { cn } from '@/lib/utils';
 import { subscribeDiscs } from '@/lib/discEvents';
+import { subscribeSync } from '@/lib/syncEvents';
 import { groupDiscs } from '@/lib/groupDiscs';
 import { combineDuplicates } from '@/lib/duplicates';
 import { loadWatchStatus } from '@/lib/watchStatus';
@@ -87,6 +88,9 @@ export default function Collection() {
   useEffect(() => {
     refresh();
   }, []);
+
+  // The header sync button reloads the shelf from the server.
+  useEffect(() => subscribeSync(refresh), []);
 
   // Discs saved, scanned or removed anywhere in the app land here instantly.
   useEffect(

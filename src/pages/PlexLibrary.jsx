@@ -16,6 +16,7 @@ import { loadConfig } from '@/lib/appSettings';
 import { syncPlexLibrary } from '@/lib/plexSync';
 import { escapeRegex } from '@/lib/matching';
 import { listAllPlexMovies } from '@/lib/plexStore';
+import { subscribeSync } from '@/lib/syncEvents';
 import { downloadPlexLibraryWorkbook } from '@/lib/xlsxExport';
 import { useTabReselect } from '@/lib/tabReset';
 import PullIndicator from '@/components/PullIndicator';
@@ -84,6 +85,9 @@ export default function PlexLibrary() {
   useEffect(() => {
     load();
   }, []);
+
+  // The header sync button reloads this list from the server.
+  useEffect(() => subscribeSync(load), [kind]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(query.trim().toLowerCase()), 300);

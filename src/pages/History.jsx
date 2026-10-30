@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import AddedRow from '@/components/history/AddedRow';
 import { loadConfig } from '@/lib/appSettings';
 import { buildRecentCsv, downloadCsv } from '@/lib/csvExport';
+import { subscribeSync } from '@/lib/syncEvents';
 import { Download, History as HistoryIcon } from 'lucide-react';
 
 const PAGE_SIZE = 25;
@@ -18,25 +19,30 @@ export default function History() {
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [hasMore, setHasMore] = useState(false);
 
+  const load = async () => {
+    const cfg = await loadConfig();
+    setConfig(cfg);
+
+    if (cfg?.plex_url) {
+      const [recent, discs] = await Promise.all([
+        base44.entities.PlexMovie.filter({}, { sort: '-added_at', limit: PAGE_SIZE + 1 }),
+        base44.entities.Disc.list(),
+      ]);
+      const items = recent.items || [];
+      setAdded(items.slice(0, PAGE_SIZE));
+      setHasMore(items.length > PAGE_SIZE);
+      setOwnedKeys(new Set(discs.map((disc) => disc.plex_rating_key).filter(Boolean)));
+    }
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    (async () => {
-      const cfg = await loadConfig();
-      setConfig(cfg);
-
-      if (cfg?.plex_url) {
-        const [recent, discs] = await Promise.all([
-          base44.entities.PlexMovie.filter({}, { sort: '-added_at', limit: PAGE_SIZE + 1 }),
-          base44.entities.Disc.list(),
-        ]);
-        const items = recent.items || [];
-        setAdded(items.slice(0, PAGE_SIZE));
-        setHasMore(items.length > PAGE_SIZE);
-        setOwnedKeys(new Set(discs.map((disc) => disc.plex_rating_key).filter(Boolean)));
-      }
-
-      setLoading(false);
-    })();
+    load();
   }, []);
+
+  // The header sync button reloads this list from the server.
+  useEffect(() => subscribeSync(load), []);
 
   const downloadRecent = () => {
     downloadCsv(`recently-added-${new Date().toISOString().slice(0, 10)}.csv`, buildRecentCsv({ items: added }));
