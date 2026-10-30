@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'shelfmark-theme';
-const THEME_COLORS = { dark: '#0b2422', light: '#f0fdfa' };
+const THEME_COLORS = { dark: '#0a0a0c', light: '#f7f4ee' };
 
 const ThemeContext = createContext({ theme: 'dark', resolved: 'dark', setTheme: () => {} });
 

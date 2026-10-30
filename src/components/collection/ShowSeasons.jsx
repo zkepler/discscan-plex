@@ -98,7 +98,7 @@ export default function ShowSeasons({
                 Owned
               </span>
             ) : inPlex ? (
-              <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-primary/80">
+              <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-orange-400">
                 <PlayCircle className="h-3.5 w-3.5" />
                 In Plex
               </span>
