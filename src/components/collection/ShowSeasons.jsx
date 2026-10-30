@@ -32,9 +32,18 @@ export default function ShowSeasons({
   const onServer = (season) =>
     plexSeasons ? plexSeasons.includes(season) : season <= Number(seasonCount || 0);
 
+  // A shelf copy whose title names no season stands for the whole show, so when
+  // that show is also on Plex the seasons Plex holds count as owned.
+  const showWide =
+    copiesBySeason.size === 0 && unnumbered.length > 0 && (plexSeasons !== null || Number(seasonCount) > 0);
+  const ownedCount = seasons.filter(
+    (season) => copiesBySeason.has(season) || (showWide && onServer(season))
+  ).length;
+
   const row = (season, copies) => {
-    const owned = copies.length > 0;
     const inPlex = onServer(season);
+    const shelfCopies = copies.length ? copies : showWide && inPlex ? unnumbered : [];
+    const owned = shelfCopies.length > 0;
 
     if (!owned && !inPlex) {
       return (
@@ -54,14 +63,14 @@ export default function ShowSeasons({
       <button
         key={`season-${season}`}
         type="button"
-        onClick={() => (owned ? onSelect(copies[0]) : onPlex?.(title))}
+        onClick={() => (owned ? onSelect(shelfCopies[0]) : onPlex?.(title))}
         className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary"
       >
         <span className="min-w-0">
           <span className="block text-sm font-medium text-foreground">Season {season}</span>
           <span className="mt-1 flex flex-wrap gap-1">
             {owned ? (
-              copies.map((disc) => (
+              shelfCopies.map((disc) => (
                 <span
                   key={disc.id}
                   className={`rounded border px-1.5 py-0.5 text-xs uppercase tracking-[0.08em] ${formatStyle(
@@ -96,7 +105,7 @@ export default function ShowSeasons({
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="font-display text-lg leading-none text-foreground">Seasons</h3>
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          {ownedSeasons.length} of {total || '?'} owned
+          {ownedCount} of {total || '?'} owned
         </p>
       </div>
 
@@ -110,7 +119,7 @@ export default function ShowSeasons({
         )}
       </div>
 
-      {unnumbered.length ? (
+      {unnumbered.length && !showWide ? (
         <div className="mt-4 space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Also on your shelf</p>
           {unnumbered.map((disc) => (
