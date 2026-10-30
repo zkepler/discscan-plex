@@ -34,13 +34,24 @@ export default function DiscForm({
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        {form.cover_url || disc.cover_url ? (
-          <PosterLightbox src={form.cover_url || disc.cover_url} title={form.title} />
-        ) : (
-          <div className="h-32 w-[86px] shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-            <PosterUpload onUploaded={(url) => set('cover_url', url)} />
-          </div>
-        )}
+        <div className="w-[86px] shrink-0 space-y-1">
+          {form.cover_url || disc.cover_url ? (
+            <PosterLightbox src={form.cover_url || disc.cover_url} title={form.title} />
+          ) : (
+            <div className="h-32 overflow-hidden rounded-md border border-border bg-muted">
+              <PosterUpload onUploaded={(url) => set('cover_url', url)} />
+            </div>
+          )}
+          {form.cover_url || disc.cover_url ? (
+            <div className="h-7 overflow-hidden rounded-md border border-border bg-muted">
+              <PosterUpload
+                label="Replace"
+                compact
+                onUploaded={(url) => set('cover_url', url)}
+              />
+            </div>
+          ) : null}
+        </div>
 
         <div className="flex-1 space-y-3">
           <div className="space-y-1.5">
