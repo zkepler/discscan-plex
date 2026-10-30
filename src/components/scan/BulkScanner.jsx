@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { findPlexMatch } from '@/lib/matching';
 import { emitDisc } from '@/lib/discEvents';
 import { stopAllCameraStreams } from '@/lib/cameraStreams';
+import { playScanChime } from '@/lib/chime';
 import { FORMATS } from '@/lib/constants';
 
 // The camera keeps re-reading a barcode that stays in frame, so a code is only
@@ -86,6 +87,7 @@ export default function BulkScanner() {
     if (now - (seenRef.current.get(code) || 0) < REPEAT_MS) return;
     seenRef.current.set(code, now);
 
+    playScanChime();
     rowSeq += 1;
     const id = `bulk-${rowSeq}`;
     setRows((prev) => [{ id, upc: code, title: '', status: 'saving' }, ...prev].slice(0, MAX_ROWS));

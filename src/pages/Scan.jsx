@@ -12,6 +12,7 @@ import { Layers, Loader2, ScanLine, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTabReselect } from '@/lib/tabReset';
 import { useTabActive } from '@/lib/tabActive';
+import { playScanChime } from '@/lib/chime';
 
 const MODES = [
   { id: 'scan', label: 'Scan', icon: ScanLine },
@@ -37,6 +38,7 @@ export default function Scan() {
       }
       if (busyRef.current) return;
       busyRef.current = true;
+      playScanChime();
       setPaused(true);
       setLooking(true);
 
