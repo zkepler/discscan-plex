@@ -6,11 +6,8 @@ import DiscPlexMatch from '@/components/collection/DiscPlexMatch';
 import DiscExternalLinks from '@/components/collection/DiscExternalLinks';
 import FormatPicker from '@/components/collection/FormatPicker';
 import PosterLightbox from '@/components/collection/PosterLightbox';
-import MetadataFields from '@/components/collection/MetadataFields';
-import MetadataImport from '@/components/collection/MetadataImport';
-import PlexMetadataPull from '@/components/collection/PlexMetadataPull';
 
-export default function DiscForm({ disc, form, set, confirming, onSave, onRemove, onClose, onMetadata }) {
+export default function DiscForm({ disc, form, set, confirming, onSave, onRemove, onClose }) {
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
@@ -39,27 +36,6 @@ export default function DiscForm({ disc, form, set, confirming, onSave, onRemove
         <p className="text-xs text-muted-foreground">
           This copy keeps the first format — any others are added as extra copies.
         </p>
-      </div>
-
-      <div className="space-y-3 border-t border-border/70 pt-4">
-        <div>
-          <h3 className="font-display text-lg leading-none text-foreground">Metadata &amp; rich details</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Cast, synopsis and release details for this copy.
-          </p>
-        </div>
-        <PlexMetadataPull
-          title={form.title}
-          year={form.year}
-          format={form.formats[0]}
-          ratingKey={form.plex_rating_key}
-          onMetadata={onMetadata}
-        />
-        <MetadataImport
-          onImport={(patch) => onMetadata(patch)}
-          onCover={(url) => set('cover_url', url)}
-        />
-        <MetadataFields form={form} set={set} />
       </div>
 
       <div className="space-y-3">
