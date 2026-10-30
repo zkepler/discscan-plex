@@ -51,7 +51,15 @@ export default function Scan() {
 
         const response = await base44.functions.invoke('lookupBarcode', { upc: code });
         const data = response.data || {};
-        setCapture({ upc: code, title: data.title || '', image: data.image || '', found: !!data.found });
+        setCapture({
+          upc: code,
+          title: data.title || '',
+          year: data.year || '',
+          format: data.format || '',
+          image: data.image || '',
+          details: data.details || null,
+          found: !!data.found,
+        });
       } catch (error) {
         setCapture({ upc: code, title: '', image: '', found: false });
       } finally {
@@ -62,16 +70,40 @@ export default function Scan() {
     [toast]
   );
 
-  const pickTitle = (result) => {
+  const pickTitle = async (result) => {
     setPaused(true);
-    setCapture({
+    const picked = {
       upc: result.upc || '',
       title: result.title || '',
       image: result.image || '',
       year: result.year || '',
       format: result.format || '',
+      details: null,
+      detailsPending: true,
       found: true,
-    });
+    };
+    setCapture(picked);
+
+    try {
+      const response = await base44.functions.invoke('lookupBarcode', {
+        title: picked.title,
+        year: picked.year || undefined,
+      });
+      const details = response.data?.details || null;
+      setCapture((prev) =>
+        !prev || prev.title !== picked.title
+          ? prev
+          : {
+              ...prev,
+              details,
+              detailsPending: false,
+              year: prev.year || details?.year || '',
+              image: prev.image || details?.poster || '',
+            }
+      );
+    } catch {
+      setCapture((prev) => (!prev || prev.title !== picked.title ? prev : { ...prev, detailsPending: false }));
+    }
   };
 
   const reset = () => {

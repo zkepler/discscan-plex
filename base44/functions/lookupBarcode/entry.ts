@@ -12,6 +12,7 @@ function cleanTitle(raw) {
     .replace(/\((?:good|very good|acceptable|used|new|like new|sealed)[^)]*\)/gi, ' ')
     .replace(/^(?:pre-?owned|used|new)\s*[-–:]?\s*/i, '')
     .replace(/\s*[-–]\s*(dvd|blu-?ray|4k.*)$/i, '')
+    .replace(/\(\s*\)/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -22,6 +23,74 @@ function cleanWebTitle(raw) {
     .replace(/\s*[-–]\s*(dvd|blu-?ray|4k|uhd)\s*$/i, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function normalizeDetails(raw) {
+  if (!raw || raw.found === false || !raw.title) return null;
+
+  const toNumber = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : null;
+  };
+  const toList = (value, limit) =>
+    (Array.isArray(value) ? value : [])
+      .map((entry) => String(entry || '').trim())
+      .filter(Boolean)
+      .slice(0, limit);
+
+  const imdbId = String(raw.imdb_id || '').trim();
+  const poster = String(raw.poster || '').trim();
+
+  return {
+    title: cleanWebTitle(raw.title),
+    year: toNumber(raw.year),
+    directors: toList(raw.directors, 3),
+    runtime_minutes: toNumber(raw.runtime_minutes),
+    genres: toList(raw.genres, 3),
+    rating: toNumber(raw.rating),
+    plot: String(raw.plot || '').slice(0, 320),
+    imdb_id: /^tt\d{7,9}$/.test(imdbId) ? imdbId : '',
+    poster: /^https?:\/\//i.test(poster) ? poster : '',
+  };
+}
+
+async function movieDetails(base44, title, year) {
+  const response = await base44.asServiceRole.integrations.Core.InvokeLLM({
+    prompt:
+      `Look up the film or TV title "${title}"${year ? ` (${year})` : ''} on public movie databases — IMDb, TMDb, Rotten Tomatoes, Wikipedia — and identify the single most likely title behind a physical disc release.\n` +
+      'Return:\n' +
+      '- found: true only when you positively identified the title, false otherwise\n' +
+      '- title: the canonical title\n' +
+      '- year: the original release year as a 4-digit integer\n' +
+      '- directors: up to 3 director (or creator) names\n' +
+      '- runtime_minutes: the theatrical run time in whole minutes\n' +
+      '- genres: up to 3 genres\n' +
+      '- rating: the IMDb user rating out of 10, one decimal place\n' +
+      '- plot: a two-sentence synopsis under 300 characters\n' +
+      '- imdb_id: the IMDb title id such as tt0133093, only when a page states it\n' +
+      '- poster: a direct https poster image URL\n' +
+      'Never invent a value. Omit any field you cannot verify on a real page.',
+    add_context_from_internet: true,
+    model: 'gemini_3_8_flash',
+    response_json_schema: {
+      type: 'object',
+      properties: {
+        found: { type: 'boolean' },
+        title: { type: 'string' },
+        year: { type: 'integer' },
+        directors: { type: 'array', items: { type: 'string' } },
+        runtime_minutes: { type: 'integer' },
+        genres: { type: 'array', items: { type: 'string' } },
+        rating: { type: 'number' },
+        plot: { type: 'string' },
+        imdb_id: { type: 'string' },
+        poster: { type: 'string' },
+      },
+      required: ['found'],
+    },
+  });
+
+  return normalizeDetails(response);
 }
 
 async function webReleaseSearch(base44, query) {
@@ -137,6 +206,15 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ found: results.length > 0, results });
     }
 
+    if (body?.title) {
+      const title = String(body.title).trim().replace(/\s+/g, ' ').slice(0, 120);
+      if (title.length < 2) {
+        return Response.json({ error: 'Type at least two characters' }, { status: 400 });
+      }
+      const details = await movieDetails(base44, title, Number(body.year) || null).catch(() => null);
+      return Response.json({ found: !!details, details });
+    }
+
     const upc = String(body?.upc || '').replace(/\D/g, '');
     if (upc.length < 8) {
       return Response.json({ error: 'Enter a valid barcode' }, { status: 400 });
@@ -164,14 +242,18 @@ export default async function (req: Request): Promise<Response> {
     }
 
     const image = Array.isArray(item.images) && item.images.length ? item.images[0] : '';
+    const title = cleanTitle(item.title);
+    const details = await movieDetails(base44, title, null).catch(() => null);
 
     return Response.json({
       found: true,
       upc,
-      title: cleanTitle(item.title),
+      title: details?.title || title,
+      year: details?.year || null,
       brand: item.brand || '',
       category: item.category || '',
-      image,
+      image: image || details?.poster || '',
+      details,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

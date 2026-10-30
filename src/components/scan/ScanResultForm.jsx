@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { pullPostersForDiscs } from '@/lib/plexPosters';
 import { FORMATS } from '@/lib/constants';
 import { addFormatCopies } from '@/lib/discCopies';
 import FormatPicker from '@/components/collection/FormatPicker';
+import MovieDetailsCard from '@/components/scan/MovieDetailsCard';
 import { Check } from 'lucide-react';
 
 export default function ScanResultForm({ capture, onDone, onCancel }) {
@@ -22,6 +23,19 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
   });
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const poster = capture.image || capture.details?.poster || '';
+
+  // Catalogue details can arrive after the form mounts — fill only fields the user has not touched.
+  useEffect(() => {
+    const details = capture.details;
+    if (!details) return;
+    setForm((prev) => ({
+      ...prev,
+      title: prev.title || details.title || '',
+      year: prev.year || (details.year ? String(details.year) : ''),
+    }));
+  }, [capture.details]);
 
   function save() {
     const title = form.title.trim();
@@ -36,7 +50,7 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
       year: form.year ? Number(form.year) : null,
       format: formats[0],
       location: form.location.trim(),
-      cover_url: capture.image || '',
+      cover_url: poster,
       plex_rating_key: null,
       plex_title: null,
     };
@@ -85,8 +99,8 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-start gap-4">
         <div className="h-28 w-[76px] shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-          {capture.image ? (
-            <img src={capture.image} alt="" className="h-full w-full object-cover" />
+          {poster ? (
+            <img src={poster} alt="" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
               <span className="font-display text-3xl text-muted-foreground/60">
@@ -135,6 +149,8 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
           </div>
         </div>
       </div>
+
+      <MovieDetailsCard details={capture.details} loading={capture.detailsPending} />
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-4">
         <p className="text-xs text-muted-foreground">
