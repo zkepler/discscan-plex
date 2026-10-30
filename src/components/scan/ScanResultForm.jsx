@@ -13,6 +13,7 @@ import { filmCopies } from '@/lib/duplicates';
 import { normaliseMetadata } from '@/lib/discMetadata';
 import FormatPicker from '@/components/collection/FormatPicker';
 import MovieDetailsCard from '@/components/scan/MovieDetailsCard';
+import PosterUpload from '@/components/scan/PosterUpload';
 import { Check } from 'lucide-react';
 
 export default function ScanResultForm({ capture, onDone, onCancel }) {
@@ -25,10 +26,11 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
   });
 
   const [saving, setSaving] = useState(false);
+  const [ownPoster, setOwnPoster] = useState('');
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const poster = capture.image || capture.details?.poster || '';
+  const poster = ownPoster || capture.image || capture.details?.poster || '';
 
   // Catalogue details can arrive after the form mounts — fill only fields the user has not touched.
   useEffect(() => {
@@ -133,11 +135,7 @@ export default function ScanResultForm({ capture, onDone, onCancel }) {
           {poster ? (
             <img src={poster} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <span className="font-display text-3xl text-muted-foreground/60">
-                {(form.title || '?').charAt(0)}
-              </span>
-            </div>
+            <PosterUpload onUploaded={setOwnPoster} />
           )}
         </div>
 
