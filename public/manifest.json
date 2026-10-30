@@ -1,0 +1,25 @@
+{
+  "name": "Shelfmark",
+  "short_name": "Shelfmark",
+  "description": "Catalogue your DVD, Blu-ray and 4K discs and keep them in step with your Plex library.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
+  "icons": [
+    {
+      "src": "https://media.base44.com/images/public/6ae3823d21c79f2146d349b2/03795d12f_generated_image.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6ae3823d21c79f2146d349b2/03795d12f_generated_image.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
