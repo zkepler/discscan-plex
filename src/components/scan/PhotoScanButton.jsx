@@ -2,16 +2,32 @@ import { useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { DecodeHintType } from '@zxing/library';
 import { Camera, Loader2 } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 // iPhone Safari does not always hand a live stream to a web app (in-app
 // browsers, standalone home-screen apps and some permission states refuse it),
 // so the phone's own camera is used through a photo capture instead.
 const hints = new Map([[DecodeHintType.TRY_HARDER, true]]);
 
-export default function PhotoScanButton({ onDetected }) {
+export default function PhotoScanButton({ onDetected, onIdentified }) {
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+
+  // A case with no barcode (or a sleeve the scanner cannot read) is identified
+  // from the photo of the cover instead.
+  const readCover = async (file) => {
+    setNote('No barcode in that photo — reading the cover…');
+    const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+    const response = await base44.functions.invoke('identifyFromPhoto', { file_uri });
+    const data = response.data || {};
+    if (data.found && data.title) {
+      setNote('');
+      onIdentified?.(data);
+      return;
+    }
+    setNote('Could not make out the cover — fill the frame with the front of the case and try again.');
+  };
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
@@ -26,7 +42,9 @@ export default function PhotoScanButton({ onDetected }) {
       const result = await reader.decodeFromImageUrl(url);
       onDetected?.(result.getText());
     } catch {
-      setNote('No barcode in that photo — fill the frame with the barcode and try again.');
+      await readCover(file).catch(() =>
+        setNote('Could not read that photo — try again with the barcode or the cover in the frame.')
+      );
     } finally {
       URL.revokeObjectURL(url);
       setBusy(false);

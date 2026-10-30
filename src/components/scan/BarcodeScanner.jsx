@@ -58,7 +58,7 @@ const cameraAttempts = (deviceId) =>
         true,
       ];
 
-export default function BarcodeScanner({ onDetected, paused }) {
+export default function BarcodeScanner({ onDetected, onIdentified, paused }) {
   const videoRef = useRef(null);
   const onDetectedRef = useRef(onDetected);
   const pausedRef = useRef(paused);
@@ -338,7 +338,7 @@ export default function BarcodeScanner({ onDetected, paused }) {
       </div>
 
       <CameraSelect value={deviceId} onChange={setDeviceId} refreshKey={ready} />
-      <PhotoScanButton onDetected={onDetected} />
+      <PhotoScanButton onDetected={onDetected} onIdentified={onIdentified} />
     </div>
   );
 }

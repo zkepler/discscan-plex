@@ -502,8 +502,6 @@ export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: st
     const seasonCounts = section.kind === 'show' ? await regularSeasons(baseUrl, token, section.key) : null;
     items.forEach((item: any) => {
       if (!item?.ratingKey) return;
-      // Box sets and playlists are not titles: their movies are catalogued on their own.
-      if (String(item.type || '').toLowerCase() === 'collection') return;
       const resolution = item.Media?.[0]?.videoResolution || null;
       const kind = kindFor(section.kind, resolution);
       if (wanted && !wanted.has(kind)) return;
