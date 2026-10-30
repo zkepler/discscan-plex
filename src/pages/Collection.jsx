@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScanLine, Search, Share2 } from 'lucide-react';
+import { Download, ScanLine, Search } from 'lucide-react';
 import StatsRow from '@/components/collection/StatsRow';
 import DiscCard from '@/components/collection/DiscCard';
 import DiscDialog from '@/components/collection/DiscDialog';
@@ -183,8 +183,8 @@ export default function Collection() {
             onClick={() => setSharing(true)}
             disabled={loading || (discs.length === 0 && plexTotal === 0)}
           >
-            <Share2 className="mr-2 h-4 w-4" />
-            Share
+            <Download className="mr-2 h-4 w-4" />
+            Download CSV
           </Button>
           <Button asChild>
             <Link to="/scan">
