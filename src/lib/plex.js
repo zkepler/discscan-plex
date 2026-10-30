@@ -113,10 +113,11 @@ export async function fetchLibraryMovies(config, onProgress, kinds) {
     onProgress?.(movies.length, 'Plex library');
     return { movies, url: data.url || normalizeBaseUrl(config.plex_url) };
   } catch (error) {
-    const payload = error?.response?.data;
-    if (payload?.code !== 'unreachable') {
-      throw new Error(payload?.error || error.message || 'Could not read your Plex library.');
+    if (error?.response?.status === 401) {
+      throw new Error('Sign in again, then retry the sync.');
     }
+    // A slow Plex can outlast the server-side request, so this device tries the
+    // server directly before giving up.
     const movies = await fetchLibraryMoviesInBrowser(config, onProgress, kinds);
     return { movies, url: normalizeBaseUrl(config.plex_url) };
   }

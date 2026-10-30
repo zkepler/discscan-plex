@@ -27,7 +27,7 @@ export default async function (req: Request): Promise<Response> {
     const baseUrl = requested.replace(/\/+$/, '');
     const res = await safeFetch(
       `${baseUrl}/library/metadata/${ratingKey}?X-Plex-Token=${encodeURIComponent(token)}`,
-      { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(25000) }
+      { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(60000) }
     );
 
     if (res.status === 401) {

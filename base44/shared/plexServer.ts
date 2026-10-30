@@ -331,7 +331,7 @@ function remoteScore(connection: any): number {
 export async function listPlexServers(token: string): Promise<PlexServer[]> {
   const res = await fetch(RESOURCES_URL, {
     headers: { Accept: 'application/json', 'X-Plex-Token': token },
-    signal: AbortSignal.timeout(12000),
+    signal: AbortSignal.timeout(20000),
   });
 
   if (res.status === 401) {
@@ -379,7 +379,7 @@ async function reachable(baseUrl: string, token: string): Promise<boolean> {
   try {
     const res = await safeFetch(`${baseUrl}/identity?X-Plex-Token=${encodeURIComponent(token)}`, {
       headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(15000),
     });
     return res.ok;
   } catch (error) {
@@ -402,7 +402,7 @@ async function plexJson(baseUrl: string, token: string, path: string) {
   const sep = path.includes('?') ? '&' : '?';
   const res = await safeFetch(
     `${normalizeBaseUrl(baseUrl)}${path}${sep}X-Plex-Token=${encodeURIComponent(token)}`,
-    { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(25000) }
+    { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(120000) }
   );
 
   if (res.status === 401) throw plexError('Plex rejected that token. Check the token value.', 400);
@@ -440,6 +440,31 @@ function wantsSection(kind: string, wanted: Set<string> | null): boolean {
   return wanted.has('movie') || wanted.has('4k');
 }
 
+// A slow server can take well over a minute per section, so the section is read
+// in pages: each request stays small enough to finish, and a huge library still
+// arrives in full.
+const PAGE_SIZE = 1000;
+const MAX_PAGES = 40;
+
+async function sectionItems(baseUrl: string, token: string, key: string): Promise<any[]> {
+  const items: any[] = [];
+  let start = 0;
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const data = await plexJson(
+      baseUrl,
+      token,
+      `/library/sections/${key}/all?X-Plex-Container-Start=${start}&X-Plex-Container-Size=${PAGE_SIZE}`
+    );
+    const container = data?.MediaContainer;
+    const batch = container?.Metadata || [];
+    items.push(...batch);
+    const total = Number(container?.totalSize ?? container?.size ?? 0);
+    start += batch.length;
+    if (!batch.length || !total || start >= total) break;
+  }
+  return items;
+}
+
 export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: string[]) {
   const wanted = Array.isArray(kinds) && kinds.length ? new Set(kinds) : null;
   const sectionsData = await plexJson(baseUrl, token, '/library/sections');
@@ -457,8 +482,7 @@ export async function fetchPlexMovies(baseUrl: string, token: string, kinds?: st
 
   const byKey = new Map<string, any>();
   for (const section of sections) {
-    const data = await plexJson(baseUrl, token, `/library/sections/${section.key}/all`);
-    const items = data?.MediaContainer?.Metadata || [];
+    const items = await sectionItems(baseUrl, token, section.key);
     items.forEach((item: any) => {
       if (!item?.ratingKey) return;
       const resolution = item.Media?.[0]?.videoResolution || null;

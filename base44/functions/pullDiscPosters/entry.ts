@@ -77,7 +77,7 @@ export default async function (req: Request): Promise<Response> {
           const thumb = thumbByKey.get(String(disc.plex_rating_key)) as string;
           const res = await safeFetch(
             `${baseUrl}${photoPath(thumb)}&X-Plex-Token=${encodeURIComponent(token)}`,
-            { headers: { Accept: 'image/*' }, signal: AbortSignal.timeout(20000) }
+            { headers: { Accept: 'image/*' }, signal: AbortSignal.timeout(60000) }
           );
           if (!res.ok) throw new Error(`Plex responded with ${res.status} for that poster.`);
           const bytes = await res.arrayBuffer();

@@ -65,7 +65,7 @@ export default async function (req: Request): Promise<Response> {
         batch.map(async (disc: any) => {
           const res = await safeFetch(
             `${baseUrl}/library/metadata/${disc.plex_rating_key}?X-Plex-Token=${encodeURIComponent(token)}`,
-            { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20000) }
+            { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(60000) }
           );
           if (!res.ok) throw new Error(`Plex responded with ${res.status} for that item.`);
           const data = await res.json().catch(() => null);
